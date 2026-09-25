@@ -1,0 +1,224 @@
+/* src/App.css - Custom Styling TaskFlow */
+
+/* =========================================================
+   1. GLOBAL CUSTOM SCROLLBAR (Adaptif Light/Dark Mode)
+   ========================================================= */
+/* Webkit Browsers: Chrome, Edge, Safari, Opera */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  /* Slate light mode */
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 51, 234, 0.6);
+  /* Purple accent */
+}
+
+/* Scrollbar di Dark Mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.6);
+  /* Slate-700 dark mode */
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.7);
+  /* Purple-400 hover */
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgba(51, 65, 85, 0.6) transparent;
+}
+
+/* Utility Class scrollbar khusus */
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
+
+
+/* =========================================================
+   2. FIX REACT-CALENDAR (Navigasi & Baris Tanggal Presisi)
+   ========================================================= */
+.react-calendar {
+  width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  font-family: inherit !important;
+}
+
+/* Navigasi Header (Panah Kiri-Kanan & Judul Bulan) */
+.react-calendar__navigation {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin-bottom: 0.5rem !important;
+  background: transparent !important;
+}
+
+.react-calendar__navigation button {
+  min-width: 36px !important;
+  height: 36px !important;
+  background: transparent !important;
+  font-weight: 800 !important;
+  font-size: 1rem !important;
+  border-radius: 0.5rem !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  color: #334155 !important;
+}
+
+.dark .react-calendar__navigation button {
+  color: #f1f5f9 !important;
+}
+
+.react-calendar__navigation button:hover {
+  background-color: rgba(147, 51, 234, 0.12) !important;
+  color: #9333ea !important;
+}
+
+.dark .react-calendar__navigation button:hover {
+  background-color: rgba(168, 85, 247, 0.2) !important;
+  color: #c084fc !important;
+}
+
+.react-calendar__navigation button:disabled {
+  opacity: 0.3 !important;
+}
+
+/* Label Judul Bulan & Tahun */
+.react-calendar__navigation__label {
+  pointer-events: none !important;
+  cursor: default !important;
+  background: transparent !important;
+}
+
+.react-calendar__navigation__label__labelText {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.95rem !important;
+}
+
+.dark .react-calendar__navigation__label__labelText {
+  color: #f8fafc !important;
+}
+
+/* Header Nama Hari (SEN, SEL, RAB, KAM, JUM, SAB, MIN) */
+.react-calendar__month-view__weekdays {
+  text-align: center !important;
+  font-weight: 800 !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase !important;
+  color: #94a3b8 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none !important;
+  cursor: default !important;
+}
+
+/* Grid & Ukuran Kotak Tanggal (36px Presisi Pas Dalam Kartu) */
+.react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  row-gap: 2px !important;
+}
+
+.react-calendar__tile {
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  margin: 1px auto !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #334155 !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark .react-calendar__tile {
+  color: #e2e8f0 !important;
+}
+
+.react-calendar__tile:hover {
+  background-color: rgba(147, 51, 234, 0.1) !important;
+  color: #9333ea !important;
+}
+
+.dark .react-calendar__tile:hover {
+  background-color: rgba(168, 85, 247, 0.2) !important;
+  color: #c084fc !important;
+}
+
+/* Hari Ini */
+.react-calendar__tile--now {
+  color: #9333ea !important;
+  font-weight: 900 !important;
+  border: 1px dashed rgba(147, 51, 234, 0.6) !important;
+}
+
+.dark .react-calendar__tile--now {
+  color: #c084fc !important;
+  border-color: rgba(192, 132, 252, 0.5) !important;
+}
+
+/* Tanggal Terpilih */
+.react-calendar__tile--active,
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background-color: #9333ea !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4) !important;
+}
+
+/* Libur Nasional / Minggu */
+.react-calendar__tile.text-red-holiday {
+  color: #ef4444 !important;
+  font-weight: 800 !important;
+}
+
+.dark .react-calendar__tile.text-red-holiday {
+  color: #f87171 !important;
+}
+
+.react-calendar__tile--active.text-red-holiday {
+  color: #ffffff !important;
+}
+
+.react-calendar__tile--active .task-dot-indicator {
+  background-color: #ffffff !important;
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: inherit !important;
+}
