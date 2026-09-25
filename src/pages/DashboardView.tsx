@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo } from "react";
-import { CheckCircle2, Circle, Clock, Sun, Layers, Flame, CheckCheck, AlertCircle } from "lucide-react";
+import { CheckCircle2, Circle, Clock, CloudSun, CloudMoon, Layers, Flame, CheckCheck, AlertCircle } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ScrollAnimate from "../components/ScrollAnimate";
@@ -48,6 +48,56 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const [autoDelete, setAutoDelete] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidays, setHolidays] = useState<string[]>([]);
+
+  // STATE DETEKSI CUACA & LOKASI DINAMIS
+  const [weatherData, setWeatherData] = useState({
+    temp: "--°C",
+    location: "Sumedang"
+  });
+
+  // 1. DETEKSI LOKASI & CUACA REALTIME VIA GEOLOCATION & OPEN-METEO API
+  useEffect(() => {
+    const fetchWeatherAndLocation = async (lat: number, lon: number, defaultLocation: string) => {
+      try {
+        // Ambil Suhu dari Open-Meteo (Gratis tanpa API Key)
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        const weatherJson = await weatherRes.json();
+        
+        let tempStr = "--°C";
+        if (weatherJson && weatherJson.current_weather) {
+          tempStr = `${Math.round(weatherJson.current_weather.temperature)}°C`;
+        }
+
+        // Ambil Nama Daerah (Desa/Kecamatan/Kabupaten) via Reverse Geocoding
+        let detectedLoc = defaultLocation;
+        try {
+          const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
+          const geoJson = await geoRes.json();
+          detectedLoc = geoJson.locality || geoJson.city || geoJson.principalSubdivision || defaultLocation;
+        } catch (e) {
+          console.warn("Gagal geocoding nama daerah, memakai fallback:", defaultLocation);
+        }
+
+        setWeatherData({ temp: tempStr, location: detectedLoc });
+      } catch (err) {
+        console.error("Gagal memuat cuaca:", err);
+      }
+    };
+
+    // Koordinat Default Sumedang (Ganeas/Kota) jika GPS ditolak
+    const sumedangLat = -6.8580;
+    const sumedangLon = 107.9271;
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchWeatherAndLocation(pos.coords.latitude, pos.coords.longitude, "Sumedang"),
+        () => fetchWeatherAndLocation(sumedangLat, sumedangLon, "Sumedang"),
+        { timeout: 6000 }
+      );
+    } else {
+      fetchWeatherAndLocation(sumedangLat, sumedangLon, "Sumedang");
+    }
+  }, []);
 
   useEffect(() => {
     const loadHolidays = async () => {
@@ -112,6 +162,10 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const timeString = time.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace(/\./g, ":");
   const todayStr = useMemo(() => `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, "0")}-${String(time.getDate()).padStart(2, "0")}`, [time]);
 
+  // LOGIKA DINAMIS SIANG VS MALAM (06:00 - 18:00 = Siang)
+  const currentHour = time.getHours();
+  const isDaytime = currentHour >= 6 && currentHour < 18;
+
   const visibleTasks = useMemo(() => tasks.filter(t => !t.is_hidden), [tasks]);
   const todayTasks = useMemo(() => visibleTasks.filter(t => t.due_date && t.due_date.startsWith(todayStr)), [visibleTasks, todayStr]);
 
@@ -146,7 +200,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
       const countCompleted = tasks.filter(t => {
         if (!t.is_completed || !t.due_date) return false;
         
-        // Konversi due_date UTC ke Date Lokal HP
         const taskDate = new Date(t.due_date);
         const taskLocalStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, "0")}-${String(taskDate.getDate()).padStart(2, "0")}`;
         
@@ -182,9 +235,27 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </h1>
                   <p className={`text-sm mt-1 font-medium ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Berikut adalah ringkasan progres dan agenda tugasmu.</p>
                 </div>
+                
+                {/* WIDGET CUACA & WAKTU DINAMIS */}
                 <div className={`flex items-center gap-3.5 px-4 py-2 rounded-2xl border shadow-sm backdrop-blur-md w-fit ${isDarkMode ? "bg-slate-900/80 border-slate-800 text-slate-200" : "bg-white/85 border-slate-200/80 text-slate-800"}`}>
-                  <div className="flex items-center gap-2 border-r border-slate-200/80 dark:border-slate-800 pr-3.5"><Sun size={20} className="text-amber-500 animate-pulse shrink-0" /><div className="flex flex-col text-left"><span className="text-xs font-black leading-tight">28°C</span><span className="text-[10px] font-bold text-slate-500 leading-tight">Bandung</span></div></div>
-                  <div className="flex flex-col text-right"><span className="text-xs font-black font-mono text-purple-600 dark:text-purple-400 tracking-wider leading-tight">{timeString}</span><span className="text-[10px] font-extrabold text-slate-400 uppercase leading-tight">WIB</span></div>
+                  <div className="flex items-center gap-2 border-r border-slate-200/80 dark:border-slate-800 pr-3.5">
+                    {/* IKON AWAN+MATAHARI (SIANG) ATAU AWAN+BULAN (MALAM) */}
+                    {isDaytime ? (
+                      <CloudSun size={20} className="text-amber-500 animate-pulse shrink-0" />
+                    ) : (
+                      <CloudMoon size={20} className="text-indigo-400 animate-pulse shrink-0" />
+                    )}
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs font-black leading-tight">{weatherData.temp}</span>
+                      <span className="text-[10px] font-bold text-slate-500 leading-tight truncate max-w-[85px]" title={weatherData.location}>
+                        {weatherData.location}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-xs font-black font-mono text-purple-600 dark:text-purple-400 tracking-wider leading-tight">{timeString}</span>
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase leading-tight">WIB</span>
+                  </div>
                 </div>
               </div>
             </ScrollAnimate>
@@ -275,7 +346,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                       <span className="text-rose-500">M</span><span>S</span><span>S</span><span>R</span><span>K</span><span>J</span><span>S</span>
                     </div>
 
-                    {/* MODEL KOTAK PRESISI DISESUAIKAN DENGAN KALENDER UTAMA */}
                     {(() => {
                       const currentYear = time.getFullYear();
                       const currentMonth = time.getMonth();
