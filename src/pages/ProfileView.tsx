@@ -66,7 +66,7 @@ export default function ProfileView({
     fetchProfileData();
   }, []);
 
-  // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
+    // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
   const handleAutoUploadImage = async (file) => {
     setIsUploadingAvatar(true);
     try {
@@ -78,11 +78,7 @@ export default function ProfileView({
       if (!rawUrl) throw new Error("Gagal upload gambar ke Cloudinary");
       const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_avif");
 
-            // === EKSEKUSI HAPUS FOTO LAMA ===
-      const oldAvatarUrl = userData.avatarUrl;
-      if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
-        try {
-                // === EKSEKUSI HAPUS FOTO LAMA ===
+      // === EKSEKUSI HAPUS FOTO LAMA ===
       const oldAvatarUrl = userData.avatarUrl;
       if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
         try {
@@ -113,6 +109,7 @@ export default function ProfileView({
           console.error("Gagal mengekstrak ID foto lama:", err);
         }
       }
+      // ================================
 
       // Langsung simpan URL baru ke Supabase
       const { error } = await supabase.from("profiles").update({ avatar_url: finalAvatarUrl }).eq("id", user.id);
