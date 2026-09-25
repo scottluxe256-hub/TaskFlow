@@ -62,34 +62,21 @@ export default function App() {
     }
   }, [isDarkMode, session, page]);
 
-  // 4. Deteksi & Listener Auth Supabase
+  // 4. Deteksi & Listener Auth Supabase (SUDAH DIPERBAIKI UNTUK GOOGLE OAUTH)
   useEffect(() => {
-    // Cek apakah URL membawa token recovery / reset password
-    const hash = window.location.hash;
-    const search = window.location.search;
-    const hasRecoveryToken =
-      hash.includes("type=recovery") ||
-      search.includes("type=recovery") ||
-      hash.includes("access_token");
-
-    if (hasRecoveryToken) {
-      setIsRecoveryMode(true);
-      setPage("reset");
-    }
-
     // Listener Perubahan Status Auth Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
 
       // Tangkap event spesifik reset password dari Supabase
-      if (event === "PASSWORD_RECOVERY" || hasRecoveryToken) {
+      if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
         setPage("reset");
       } else if (currentSession) {
-        // Jika ada session dan BUKAN dalam mode recovery, masuk ke dashboard
+        // Jika berhasil login (termasuk via Google OAuth), masuk ke dashboard
         setPage((prevPage) => (prevPage === "reset" ? "reset" : "dashboard"));
       } else {
-        // Jika tidak ada session dan BUKAN dalam mode recovery, masuk ke landing
+        // Jika logout atau tidak ada sesi
         setPage((prevPage) => (prevPage === "reset" ? "reset" : "landing"));
       }
       setLoading(false);
@@ -98,13 +85,10 @@ export default function App() {
     // Cek session awal saat app pertama kali dibuka
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (hasRecoveryToken) {
-        setIsRecoveryMode(true);
-        setPage("reset");
-      } else if (session) {
-        setPage("dashboard");
+      if (session) {
+        setPage((prevPage) => (prevPage === "reset" ? "reset" : "dashboard"));
       } else {
-        setPage("landing");
+        setPage((prevPage) => (prevPage === "reset" ? "reset" : "landing"));
       }
       setLoading(false);
     });
