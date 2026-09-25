@@ -9,7 +9,7 @@ import { fetchIndonesianHolidays } from "../services/googleCalendar";
 import { Task } from "../types";
 import { ActiveTabType } from "../App";
 import { getTaskCategory } from "../components/TaskItem";
-import { showSuccessAlert } from "../utils/sweetalert"; // Tambahan Alert
+import { showSuccessAlert } from "../utils/sweetalert"; 
 
 export interface DashboardViewProps {
   activeTab: ActiveTabType;
@@ -45,7 +45,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const [tasks, setTasks] = useState<Task[]>([]);
   
   const [userData, setUserData] = useState({ name: "", avatarUrl: "" });
-  const [autoDelete, setAutoDelete] = useState(false); // Deteksi auto delete di dashboard
+  const [autoDelete, setAutoDelete] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidays, setHolidays] = useState<string[]>([]);
 
@@ -77,7 +77,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
           setAutoDelete(profile.auto_delete_tasks || false);
         }
 
-        // Tarik SEMUA tugas (termasuk yang hidden) buat keperluan grafik mingguan
         const { data: tasksData, error } = await supabase.from("tasks").select("*, categories(name, color), category:categories(name, color)").eq("user_id", user.id).order("created_at", { ascending: false });
         if (!error && tasksData) setTasks(tasksData as Task[]);
       }
@@ -100,7 +99,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     if (newStatus === true) {
       showSuccessAlert("Tugas Selesai! 🎉", "Mantap! Lanjutkan semangatmu.", isDarkMode);
       if (autoDelete) {
-        // Soft delete kalau diselesaikan dari Dashboard
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: true, is_hidden: true } : t));
         await supabase.from("tasks").update({ is_completed: true, is_hidden: true }).eq("id", taskId);
         return;
@@ -114,7 +112,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const timeString = time.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace(/\./g, ":");
   const todayStr = useMemo(() => `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, "0")}-${String(time.getDate()).padStart(2, "0")}`, [time]);
 
-  // Pisahkan tugas yang terlihat saja untuk statistik kotak atas & list Hari Ini
   const visibleTasks = useMemo(() => tasks.filter(t => !t.is_hidden), [tasks]);
   const todayTasks = useMemo(() => visibleTasks.filter(t => t.due_date && t.due_date.startsWith(todayStr)), [visibleTasks, todayStr]);
 
@@ -133,7 +130,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     };
   }, [visibleTasks, todayTasks]);
 
-  // GRAFIK MINGGUAN: Tetap membaca SEMUA tugas (termasuk yang is_hidden)
   const weeklyActivity = useMemo(() => {
     const daysLabel = ["M", "S", "S", "R", "K", "J", "S"];
     const now = new Date();
@@ -146,7 +142,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
       d.setDate(monday.getDate() + i);
       const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       
-      // LOGIKA DEWA: Ngitung semua tugas selesai (baik hidden maupun gak) di minggu ini
       const countCompleted = tasks.filter(t => t.is_completed && t.due_date && t.due_date.startsWith(dStr)).length;
       return { day: daysLabel[d.getDay()], val: countCompleted > 0 ? Math.min(countCompleted * 25, 100) : 10 };
     });
@@ -184,9 +179,11 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
               </div>
             </ScrollAnimate>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* GRID UTAMA DIUBAH MENJADI items-stretch BIAR KOLOM KIRI & KANAN TINGGINYA SEJAJAR SAMA */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
               
-              <div className="lg:col-span-8 space-y-6">
+              {/* KOLOM KIRI */}
+              <div className="lg:col-span-8 flex flex-col gap-6">
                 <ScrollAnimate animation="fade-up" delay={100}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className={`flex items-center justify-between ${cardStyle} border-purple-500/30 bg-gradient-to-br ${isDarkMode ? "from-purple-950/30 via-slate-900/80 to-slate-900/80" : "from-purple-50/60 via-white/85 to-white/85"}`}>
@@ -212,17 +209,24 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
-                <ScrollAnimate animation="fade-up" delay={200}>
-                  <div className={`flex flex-col h-[239px] justify-between ${cardStyle}`}>
-                    <div className="flex items-center justify-between mb-2 shrink-0">
+                {/* KOTAK FOKUS HARI INI DIUBAH JADI flex-1 BIAR DINAMIS MENGIKUTI TINGGI KOLOM KANAN */}
+                <ScrollAnimate animation="fade-up" delay={200} className="flex-1 flex flex-col">
+                  <div className={`flex flex-col flex-1 justify-between ${cardStyle}`}>
+                    <div className="flex items-center justify-between mb-3 shrink-0">
                       <h2 className={`font-extrabold text-base sm:text-lg ${isDarkMode ? "text-white" : "text-slate-900"}`}>Fokus Hari Ini</h2>
                       <button type="button" onClick={() => setActiveTab("tasks")} className="text-xs font-bold text-purple-600 hover:text-purple-700 transition cursor-pointer">Lihat Semua</button>
                     </div>
-                    <div className="flex flex-col gap-2 h-[140px] overflow-y-auto custom-scrollbar pr-1">
+                    
+                    {/* SCROLL INTERNAL JUGA DIUBAH JADI flex-1 */}
+                    <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[140px]">
                       {loading ? (
-                        <div className="text-center py-8 text-xs font-bold text-slate-400 animate-pulse">Memuat data...</div>
+                        <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400 animate-pulse">
+                          <span className="text-xs font-bold">Memuat data...</span>
+                        </div>
                       ) : todayTasks.length === 0 ? (
-                        <div className="text-center py-8 text-xs font-bold text-slate-400">Tidak ada agenda tugas hari ini ☕</div>
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                          <span className={`text-xs font-bold ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Tidak ada agenda tugas hari ini ☕</span>
+                        </div>
                       ) : (
                         todayTasks.map((task) => {
                           const timeFormatted = task.due_date ? task.due_date.split("T")[1]?.substring(0, 5) || "09:00" : "09:00";
@@ -248,7 +252,8 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                 </ScrollAnimate>
               </div>
 
-              <div className="lg:col-span-4 space-y-6">
+              {/* KOLOM KANAN */}
+              <div className="lg:col-span-4 flex flex-col gap-6">
                 
                 <ScrollAnimate animation="fade-up" delay={150}>
                   <div className={`flex flex-col ${cardStyle}`}>
@@ -301,8 +306,9 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
-                <ScrollAnimate animation="fade-up" delay={250}>
-                  <div className={`flex flex-col h-[210px] justify-between ${cardStyle}`}>
+                {/* AKTIVITAS MINGGU INI DIUBAH JADI flex-1 BIAR BISA MELAR SEJAJAR SAMA KOTAK KIRI */}
+                <ScrollAnimate animation="fade-up" delay={250} className="flex-1 flex flex-col">
+                  <div className={`flex flex-col flex-1 justify-between min-h-[210px] ${cardStyle}`}>
                     <h2 className={`font-extrabold text-base mb-1 shrink-0 ${isDarkMode ? "text-white" : "text-slate-900"}`}>Aktivitas Minggu Ini</h2>
                     <div className="flex-1 flex items-end justify-between gap-2 pt-2 px-1 pb-1">
                       {weeklyActivity.map((item, i) => (
