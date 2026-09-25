@@ -23,9 +23,9 @@ export const getOptimizedImageUrl = (url: string, format = "f_avif"): string => 
   if (!url) return "";
   
   // c_thumb  = Crop gambar jadi thumbnail
-  // g_face   = Fokuskan potongan otomatis ke wajah (Face Detection AI)
-  // w_400, h_400 = Ubah ukuran fix jadi 400x400 pixel (biar ringan banget)
-  const optimizationParams = `c_thumb,g_face,w_400,h_400,${format}`;
+  // g_auto   = AI Cerdas: Cari wajah dulu, kalau gagal, cari objek paling mencolok (cocok buat 2D/Anime)
+  // w_400, h_400 = Ubah ukuran fix jadi 400x400 pixel
+  const optimizationParams = `c_thumb,g_auto,w_400,h_400,${format}`;
   
   return url.replace("/upload/", `/upload/${optimizationParams}/`);
 };

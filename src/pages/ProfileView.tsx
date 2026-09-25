@@ -87,16 +87,20 @@ export default function ProfileView({
           const folder = parts.pop(); 
           const public_id = folder === "upload" ? filename : `${folder}/${filename}`; 
 
-          // TEMPEL URL WORKER CLOUDFLARE LU DI SINI
-          fetch('https://taskflow-delete-image.scottluxe256.workers.dev', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ public_id })
-          }).catch(err => console.error("Worker gagal merespon:", err));
-        } catch (err) {
-          console.error("Gagal mengekstrak ID foto lama:", err);
+                      // Eksekusi tembak backend lokal Cloudflare Pages
+            fetch('/api/delete-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ public_id })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Status hapus Cloudinary:", data))
+            .catch(err => console.error("Backend gagal merespon:", err));
+            
+          } catch (err) {
+            console.error("Gagal mengekstrak ID foto lama:", err);
+          }
         }
-      }
       // ================================
 
       // Langsung simpan URL baru ke Supabase
