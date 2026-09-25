@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect, useMemo } from "react";
 import { CheckCircle2, Circle, Clock, Sun, Layers, Flame, CheckCheck, AlertCircle } from "lucide-react";
 import Sidebar from "../components/Sidebar";
@@ -22,6 +21,7 @@ export interface DashboardViewProps {
   setIsDarkMode: (dark: boolean) => void;
 }
 
+// Komponen Animasi Gelombang (Liquid Wave)
 function LiquidWaveCircle({ progress, waveBg, waveCrest, isDarkMode }: { progress: number; waveBg: string; waveCrest: string; isDarkMode: boolean }) {
   const textColor = isDarkMode ? "text-white" : progress >= 50 ? "text-white" : "text-slate-900";
   return (
@@ -43,11 +43,11 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const [time, setTime] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   
-  // State untuk Data Pengguna dan Avatar
   const [userData, setUserData] = useState({ name: "", avatarUrl: "" });
   const [loading, setLoading] = useState<boolean>(true);
   const [holidays, setHolidays] = useState<string[]>([]);
 
+  // Fetch Hari Libur
   useEffect(() => {
     const loadHolidays = async () => {
       const data = await fetchIndonesianHolidays(time.getFullYear());
@@ -56,6 +56,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     loadHolidays();
   }, [time.getFullYear()]);
 
+  // Jam Realtime
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -66,7 +67,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Ambil info profil & URL Avatar Cloudinary
         const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
         if (profile) {
           const displayName = profile.full_name || user.email?.split("@")[0] || "User";
@@ -79,7 +79,11 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
         const { data: tasksData, error } = await supabase.from("tasks").select("*, categories(name, color), category:categories(name, color)").eq("user_id", user.id).order("created_at", { ascending: false });
         if (!error && tasksData) setTasks(tasksData as Task[]);
       }
-    } catch (err) { console.error("Error fetching dashboard data:", err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error("Error fetching dashboard data:", err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => {
@@ -147,9 +151,9 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
 
       <div className="relative z-10 flex w-full min-h-screen">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} onLogout={onLogout} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeFilter={activeFilter} setActiveFilter={setActiveFilter} isDarkMode={isDarkMode} />
+        
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
           
-          {/* FOTO PROFIL DAN NAMA MASUK KE HEADER DI SINI */}
           <Header 
             setIsMobileMenuOpen={setIsMobileMenuOpen} 
             userName={userData.name} 
@@ -159,10 +163,14 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
           />
 
           <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+            
+            {/* GREETING */}
             <ScrollAnimate animation="fade-up" delay={0}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>Selamat Datang, {userData.name ? `${userData.name}! 👋` : <span className="inline-block w-32 h-7 bg-slate-400/20 rounded-lg animate-pulse" />}</h1>
+                  <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                    Selamat Datang, {userData.name ? `${userData.name}! 👋` : <span className="inline-block w-32 h-7 bg-slate-400/20 rounded-lg animate-pulse" />}
+                  </h1>
                   <p className={`text-sm mt-1 font-medium ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Berikut adalah ringkasan progres dan agenda tugasmu.</p>
                 </div>
                 <div className={`flex items-center gap-3.5 px-4 py-2 rounded-2xl border shadow-sm backdrop-blur-md w-fit ${isDarkMode ? "bg-slate-900/80 border-slate-800 text-slate-200" : "bg-white/85 border-slate-200/80 text-slate-800"}`}>
@@ -173,7 +181,10 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
             </ScrollAnimate>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
               <div className="lg:col-span-8 space-y-6">
+                
+                {/* STAT CARDS */}
                 <ScrollAnimate animation="fade-up" delay={100}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className={`flex items-center justify-between ${cardStyle} border-purple-500/30 bg-gradient-to-br ${isDarkMode ? "from-purple-950/30 via-slate-900/80 to-slate-900/80" : "from-purple-50/60 via-white/85 to-white/85"}`}>
@@ -199,6 +210,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
+                {/* FOKUS HARI INI */}
                 <ScrollAnimate animation="fade-up" delay={200}>
                   <div className={`flex flex-col h-[239px] justify-between ${cardStyle}`}>
                     <div className="flex items-center justify-between mb-2 shrink-0">
@@ -236,6 +248,8 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
               </div>
 
               <div className="lg:col-span-4 space-y-6">
+                
+                {/* WIDGET KALENDER MINI */}
                 <ScrollAnimate animation="fade-up" delay={150}>
                   <div className={`flex flex-col ${cardStyle}`}>
                     <div className="flex items-center justify-between mb-3">
@@ -252,6 +266,8 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                     {(() => {
                       const currentYear = time.getFullYear();
                       const currentMonth = time.getMonth();
+                      
+                      // LOGIKA CERDAS: Jumlah Hari & Offset
                       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
                       const firstDayOffset = new Date(currentYear, currentMonth, 1).getDay();
 
@@ -264,7 +280,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((date) => {
                             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
                             const isSunday = new Date(currentYear, currentMonth, date).getDay() === 0;
-                            const isHoliday = holidays.includes(dateStr);
+                            const isHoliday = holidays.includes(dateStr); // Cek tanggal merah dari Nager API
 
                             return (
                               <div
@@ -286,6 +302,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
+                {/* GRAFIK MINGGUAN */}
                 <ScrollAnimate animation="fade-up" delay={250}>
                   <div className={`flex flex-col h-[210px] justify-between ${cardStyle}`}>
                     <h2 className={`font-extrabold text-base mb-1 shrink-0 ${isDarkMode ? "text-white" : "text-slate-900"}`}>Aktivitas Minggu Ini</h2>

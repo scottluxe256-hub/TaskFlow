@@ -34,14 +34,13 @@ export default function LoginForm({ onSwitchView, onLoginSuccess }: LoginFormPro
       provider,
       options: {
         redirectTo: window.location.origin,
-        // KUNCI BARU: Tambah izin Google Tasks API
-        scopes: provider === "google"
-          ? "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/tasks.readonly"
-          : undefined,
-        queryParams: provider === "google" ? { access_type: "offline", prompt: "consent" } : undefined,
+        // Scopes Google API dihapus agar login mulus & langsung redirect ke Dashboard
       },
     });
-    if (error) { setLoading(false); setErrorMsg(error.message); }
+    if (error) { 
+      setLoading(false); 
+      setErrorMsg(error.message); 
+    }
   };
 
   return (

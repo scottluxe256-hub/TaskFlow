@@ -8,7 +8,7 @@ import Header from "../components/Header";
 import ScrollAnimate from "../components/ScrollAnimate";
 import TaskItem from "../components/TaskItem";
 import { supabase } from "../lib/supabase";
-import { fetchIndonesianHolidays, fetchAllGoogleData } from "../services/googleCalendar";
+import { fetchIndonesianHolidays } from "../services/googleCalendar"; // Hanya sisakan ini untuk tanggal merah
 import { Task } from "../types";
 import { ActiveTabType } from "../App";
 import "../App.css";
@@ -44,7 +44,6 @@ export default function CalendarView(props: CalendarViewProps) {
   // State untuk Data Pengguna dan Avatar
   const [userData, setUserData] = useState({ name: "", avatarUrl: "" });
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [googleData, setGoogleData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTasksData = async () => {
@@ -72,11 +71,8 @@ export default function CalendarView(props: CalendarViewProps) {
     const loadExternalData = async () => {
       try {
         const holidayData = await fetchIndonesianHolidays(activeYear);
-        setHolidays(holidayData.map((h: any) => h.date));
-
-        const gData = await fetchAllGoogleData(activeYear);
-        if (gData.length > 0) {
-          setGoogleData(gData);
+        if (holidayData) {
+          setHolidays(holidayData.map((h: any) => h.date));
         }
       } catch (err) {
         console.error("Gagal load external data");
@@ -92,17 +88,15 @@ export default function CalendarView(props: CalendarViewProps) {
   }, []);
 
   const handleToggleTaskDone = async (id: string, currentStatus: boolean) => {
-    if (id.startsWith("gev_") || id.startsWith("gtsk_")) return;
     setTasks(prev => prev.map(t => t.id === id ? { ...t, is_completed: !currentStatus } : t));
     await supabase.from("tasks").update({ is_completed: !currentStatus }).eq("id", id);
   };
 
   const tasksForSelectedDate = useMemo(() => {
     const selectedStr = formatDateObj(selectedDate);
-    const sbTasks = tasks.filter(t => t.due_date && t.due_date.startsWith(selectedStr));
-    const gItems = googleData.filter(e => e.due_date && e.due_date.startsWith(selectedStr) && !e.description.includes("Sync via TaskFlow"));
-    return [...sbTasks, ...gItems];
-  }, [tasks, googleData, selectedDate]);
+    // Hanya filter dari database internal TaskFlow
+    return tasks.filter(t => t.due_date && t.due_date.startsWith(selectedStr));
+  }, [tasks, selectedDate]);
 
   const cardStyle = isDarkMode ? "bg-slate-900/80 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.25)] rounded-2xl p-4 sm:p-5 lg:min-h-[460px] flex flex-col justify-between" : "bg-white/80 backdrop-blur-md border border-white/90 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-4 sm:p-5 lg:min-h-[460px] flex flex-col justify-between";
 
@@ -121,7 +115,6 @@ export default function CalendarView(props: CalendarViewProps) {
         <Sidebar {...props} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
           
-          {/* FOTO PROFIL DAN NAMA MASUK KE HEADER DI SINI */}
           <Header 
             setIsMobileMenuOpen={setIsMobileMenuOpen} 
             userName={userData.name} 
