@@ -4,7 +4,6 @@ import { supabase } from "../lib/supabase";
 import { Task, Category } from "../types";
 import CategoryDropdown from "./CategoryDropdown";
 import { getTaskCategory } from "./TaskItem";
-import { createGoogleCalendarEvent } from "../services/googleCalendar"; // KUNCI SINKRONISASINYA DI SINI
 
 export interface TaskModalProps {
   isOpen: boolean;
@@ -162,11 +161,6 @@ export default function TaskModal({
           is_completed: false
         }]);
         if (error) throw error;
-
-        // EKSEKUSI SINKRONISASI KE GOOGLE CALENDAR
-        if (dueISO) {
-          await createGoogleCalendarEvent(title.trim(), dueISO, description.trim() || undefined);
-        }
 
       } else if (mode === "edit" && taskToEdit) {
         const { error } = await supabase.from("tasks").update({
