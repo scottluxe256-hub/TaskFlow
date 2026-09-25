@@ -1,239 +1,254 @@
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
-import { Plus, CheckCircle2, Loader2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ScrollAnimate from "../components/ScrollAnimate";
-import TaskFilterBar from "../components/TaskFilterBar";
-import TaskItem, { getTaskCategory } from "../components/TaskItem";
-import TaskModal from "../components/TaskModal";
-import { supabase } from "../lib/supabase";
-import { Task } from "../types";
-import { ActiveTabType } from "../App";
-import { showDeleteConfirm, showSuccessAlert } from "../utils/sweetalert"; // Tambahan showSuccessAlert
 
-export interface TasksViewProps {
-  activeTab: ActiveTabType;
-  setActiveTab: (tab: ActiveTabType) => void;
-  activeCategory: string;
-  setActiveCategory: (cat: string) => void;
-  activeFilter: string;
-  setActiveFilter: (filter: string) => void;
-  onLogout: () => Promise<void> | void;
-  isDarkMode: boolean;
-  setIsDarkMode: (dark: boolean) => void;
-}
+import ProfileHeaderCard from "../components/profile/ProfileHeaderCard";
+import PersonalInfoSection from "../components/profile/PersonalInfoSection";
+import PreferencesSection from "../components/profile/PreferencesSection";
+import SecurityDangerSection from "../components/profile/SecurityDangerSection";
+import ActiveSessionsSection from "../components/profile/ActiveSessionsSection";
 
-export default function TasksView(props: TasksViewProps) {
-  const { activeCategory, setActiveCategory, activeFilter, setActiveFilter, isDarkMode } = props;
+import { supabase } from "../utils/supabase";
+import { uploadToCloudinary, getOptimizedImageUrl } from "../utils/cloudinary";
+import { showSuccessAlert } from "../utils/sweetalert";
+import { Loader2 } from "lucide-react";
 
+export default function ProfileView({
+  activeTab, setActiveTab, activeCategory, setActiveCategory,
+  activeFilter, setActiveFilter, onLogout, isDarkMode, setIsDarkMode
+}) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"terbaru" | "terlama">("terbaru");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [userData, setUserData] = useState({ name: "", avatarUrl: "" });
-  const [userSettings, setUserSettings] = useState({
-    reminderEnabled: false,
-    reminderDuration: "15 Menit",
-    autoDelete: false
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  
+  const [isSavingBio, setIsSavingBio] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  
+  const [userData, setUserData] = useState({
+    name: "", username: "", email: "", bio: "", avatarUrl: "", badge: "Initiator",
+    stats: { totalXP: "0 XP", profession: "Pelajar", joinedDate: "" }
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  // 1. TARIK DATA AWAL
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-  const fetchInitialData = async () => {
-    setLoading(true);
+        const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        const { count } = await supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_completed", true);
+
+        const xp = (count || 0) * 10;
+        let badgeName = xp > 1000 ? "Mastermind" : xp > 200 ? "Executor" : "Initiator";
+
+        const joinDate = new Date(profile?.created_at || user.created_at).toLocaleDateString("id-ID", { month: "short", year: "numeric" });
+        const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || "User";
+        const defaultInitialAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8b5cf6&color=fff&bold=true`;
+
+        setUserData({
+          name: displayName,
+          username: profile?.username || "",
+          email: user.email || "",
+          bio: profile?.bio || "",
+          avatarUrl: profile?.avatar_url || defaultInitialAvatar,
+          badge: badgeName,
+          stats: { totalXP: `${xp.toLocaleString()} XP`, profession: profile?.profession || "Pelajar", joinedDate: joinDate }
+        });
+
+      } catch (error) {
+        console.error("Gagal memuat profil:", error);
+      } finally {
+        setLoadingInitial(false);
+      }
+    };
+    fetchProfileData();
+  }, []);
+
+  // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
+  const handleAutoUploadImage = async (file) => {
+    setIsUploadingAvatar(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      
-      if (profile) {
-        const displayName = profile.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
-        setUserData({
-          name: displayName,
-          avatarUrl: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8b5cf6&color=fff&bold=true`
-        });
-        setUserSettings({
-          reminderEnabled: profile.reminder_enabled || false,
-          reminderDuration: profile.reminder_duration || "15 Menit",
-          autoDelete: profile.auto_delete_tasks || false
-        });
+      // Upload ke Cloudinary
+      const rawUrl = await uploadToCloudinary(file);
+      if (!rawUrl) throw new Error("Gagal upload gambar ke Cloudinary");
+      const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_avif");
+
+      // === EKSEKUSI HAPUS FOTO LAMA ===
+      const oldAvatarUrl = userData.avatarUrl;
+      if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
+        try {
+          const urlParts = oldAvatarUrl.split('/upload/');
+          if (urlParts.length > 1) {
+            const pathSegments = urlParts[1].split('/');
+            
+            // Cari index penanda versi (contoh: v1712345678)
+            const versionIndex = pathSegments.findIndex(segment => /^v\d+$/.test(segment));
+            
+            let publicIdParts = [];
+            if (versionIndex !== -1) {
+              publicIdParts = pathSegments.slice(versionIndex + 1); // Ambil nama file setelah versi
+            } else {
+              publicIdParts = pathSegments.filter(segment => !segment.includes(',')); // Fallback buang parameter
+            }
+
+            const publicIdWithExt = publicIdParts.join('/');
+            const public_id = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.')) || publicIdWithExt;
+
+            // Eksekusi tembak Worker Cloudflare
+            fetch('https://taskflow-delete-image.scottluxe256.workers.dev', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ public_id })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Status hapus Cloudinary:", data))
+            .catch(err => console.error("Worker gagal merespon:", err));
+          }
+        } catch (err) {
+          console.error("Gagal mengekstrak ID foto lama:", err);
+        }
       }
+      // ================================
 
-      // Tarik tugas yang TIDAK disembunyikan (is_hidden = false)
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*, categories(name, color), category:categories(name, color)")
-        .eq("user_id", user.id)
-        .eq("is_hidden", false) 
-        .order("created_at", { ascending: sortBy === "terlama" });
+      // Langsung simpan URL baru ke Supabase
+      const { error } = await supabase.from("profiles").update({ avatar_url: finalAvatarUrl }).eq("id", user.id);
+      if (error) throw error;
 
-      if (!error && data) setTasks(data as Task[]);
-    } catch (err) {
-      console.error("Error fetching tasks view data:", err);
+      // Update UI
+      setUserData((prev) => ({ ...prev, avatarUrl: finalAvatarUrl }));
+      showSuccessAlert("Foto Diperbarui!", "Foto profil Anda berhasil diubah.", isDarkMode);
+
+    } catch (error) {
+      console.error("Gagal upload foto:", error);
+      alert("Terjadi kesalahan saat mengunggah foto profil.");
     } finally {
-      setLoading(false);
+      setIsUploadingAvatar(false);
     }
   };
 
-  useEffect(() => {
-    fetchInitialData();
-    const channel = supabase
-      .channel("realtime-tasks-view")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => fetchInitialData())
-      .subscribe();
+  // 3. AUTO-SAVE PROFESI
+  const handleAutoSaveProfession = async (newProfession) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    return () => { supabase.removeChannel(channel); };
-  }, [sortBy]);
+      const { error } = await supabase.from("profiles").update({ profession: newProfession }).eq("id", user.id);
+      if (error) throw error;
 
-  const toggleDropdown = (name: string) => setOpenDropdown(prev => prev === name ? null : name);
-  const closeDropdowns = () => setOpenDropdown(null);
-
-  const handleToggleTaskDone = async (id: string, currentStatus: boolean) => {
-    const newStatus = !currentStatus;
-
-    if (newStatus === true) {
-      // Alert pas tugas di-ceklis
-      showSuccessAlert("Tugas Selesai! 🎉", "Kerja bagus! Satu tugas berhasil diselesaikan.", isDarkMode);
+      setUserData((prev) => ({ ...prev, stats: { ...prev.stats, profession: newProfession } }));
       
-      if (userSettings.autoDelete) {
-        // Soft Delete (Sembunyikan) tugas biar grafik dashboard tetep hidup
-        setTasks(prev => prev.filter(t => t.id !== id));
-        await supabase.from("tasks").update({ is_hidden: true, is_completed: true }).eq("id", id);
-        return; 
-      }
+    } catch (error) {
+      console.error("Gagal menyimpan profesi:", error);
     }
-
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, is_completed: newStatus } : t));
-    await supabase.from("tasks").update({ is_completed: newStatus }).eq("id", id);
   };
 
-  const handleDeleteTask = (id: string) => {
-    const targetTask = tasks.find(t => t.id === id);
-    const title = targetTask ? targetTask.title : "tugas ini";
+  // 4. SIMPAN BIODATA MANUAL
+  const handleSaveBioOnly = async (updatedFields) => {
+    setIsSavingBio(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    showDeleteConfirm(
-      title,
-      async () => {
-        // Soft Delete manual
-        setTasks(prev => prev.filter(t => t.id !== id));
-        const { error } = await supabase.from("tasks").update({ is_hidden: true }).eq("id", id);
-        if (error) fetchInitialData();
-      },
-      isDarkMode
+      const { error } = await supabase.from("profiles").update({
+        full_name: updatedFields.name,
+        username: updatedFields.username,
+        bio: updatedFields.bio
+      }).eq("id", user.id);
+
+      if (error) throw error;
+
+      setUserData((prev) => ({ 
+        ...prev, 
+        name: updatedFields.name,
+        username: updatedFields.username,
+        bio: updatedFields.bio
+      }));
+      
+      showSuccessAlert("Tersimpan!", "Biodata berhasil diperbarui.", isDarkMode);
+    } catch (error) {
+      console.error("Gagal simpan biodata:", error);
+      alert("Terjadi kesalahan saat menyimpan biodata.");
+    } finally {
+      setIsSavingBio(false);
+    }
+  };
+
+  if (loadingInitial) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-800"}`}>
+        <Loader2 size={30} className="animate-spin text-purple-600" />
+      </div>
     );
-  };
-
-  const handleOpenCreateModal = () => {
-    setModalMode("create");
-    setTaskToEdit(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (task: Task) => {
-    setModalMode("edit");
-    setTaskToEdit(task);
-    setIsModalOpen(true);
-  };
-
-  const filteredTasks = tasks.filter(t => {
-    const { name: categoryNameRaw } = getTaskCategory(t);
-    const categoryName = categoryNameRaw.toLowerCase();
-    const taskTitle = t.title.toLowerCase();
-    const q = searchQuery.toLowerCase();
-    
-    const matchSearch = q === "" || taskTitle.includes(q) || categoryName.includes(q);
-    const matchCategory = activeCategory === "semua" || categoryName === activeCategory.toLowerCase();
-
-    let matchStatus = true;
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const taskDateStr = t.due_date ? t.due_date.split("T")[0] : "";
-
-    if (activeFilter === "today") {
-      matchStatus = !!t.due_date && taskDateStr === todayStr;
-    } else if (activeFilter === "upcoming") {
-      matchStatus = !!t.due_date && taskDateStr > todayStr && !t.is_completed;
-    } else if (activeFilter === "done") {
-      matchStatus = t.is_completed;
-    } else if (activeFilter === "pending") {
-      matchStatus = !t.is_completed;
-    }
-
-    return matchSearch && matchCategory && matchStatus;
-  });
-
-  const cardStyle = isDarkMode
-    ? "bg-slate-900/80 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.25)] rounded-2xl p-5 transition-all"
-    : "bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-2xl p-5 transition-all";
+  }
 
   return (
-    <div className={`relative min-h-screen w-full font-sans flex overflow-x-hidden bg-transparent ${isDarkMode ? "text-slate-100" : "text-slate-800"}`} onClick={closeDropdowns}>
+    <div className={`relative min-h-screen w-full font-sans flex overflow-x-hidden bg-transparent ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <img src={isDarkMode ? "/assets/bg_mobile_dark.avif" : "/assets/bg_mobile.avif"} alt="Background Mobile" className="w-full h-full object-cover block sm:hidden" />
-        <img src={isDarkMode ? "/assets/bg_desktop_dark.avif" : "/assets/bg_desktop.avif"} alt="Background Desktop" className="w-full h-full object-cover hidden sm:block" />
+        <img src={isDarkMode ? "/assets/bg_mobile_dark.avif" : "/assets/bg_mobile.avif"} alt="Background" className="w-full h-full object-cover block sm:hidden" />
+        <img src={isDarkMode ? "/assets/bg_desktop_dark.avif" : "/assets/bg_desktop.avif"} alt="Background" className="w-full h-full object-cover hidden sm:block" />
       </div>
 
       <div className="relative z-10 flex w-full min-h-screen">
-        <Sidebar {...props} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} onLogout={onLogout} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeFilter={activeFilter} setActiveFilter={setActiveFilter} isDarkMode={isDarkMode} />
 
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
-          <div className="relative z-40">
-            <Header setIsMobileMenuOpen={setIsMobileMenuOpen} userName={userData.name} avatarUrl={userData.avatarUrl} isDarkMode={isDarkMode} setIsDarkMode={props.setIsDarkMode} />
-          </div>
+          
+          {/* AVATAR URL NYAMBUNG KE SINI */}
+          <Header 
+            setIsMobileMenuOpen={setIsMobileMenuOpen} 
+            userName={userData.name} 
+            avatarUrl={userData.avatarUrl} 
+            isDarkMode={isDarkMode} 
+            setIsDarkMode={setIsDarkMode} 
+          />
 
           <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
             <ScrollAnimate animation="fade-up" delay={0}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}>Tugas Saya</h1>
-                  <p className={`text-sm mt-0.5 font-medium ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Kelola dan selesaikan tanggung jawab harianmu.</p>
-                </div>
-                <button type="button" onClick={handleOpenCreateModal} className="w-fit px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center gap-2 transition cursor-pointer shadow-md shadow-purple-500/20 active:scale-[0.98]">
-                  <Plus size={16} /> Tambah Tugas Baru
-                </button>
+              <div>
+                <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}>Pengaturan Profil 👤</h1>
+                <p className={`text-sm mt-1 font-medium ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Kelola informasi akun, preferensi notifikasi, dan keamanan TaskFlow Anda.</p>
               </div>
             </ScrollAnimate>
 
-            <div className="relative z-30">
-              <ScrollAnimate animation="fade-up" delay={100}>
-                <TaskFilterBar activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeFilter={activeFilter} setActiveFilter={setActiveFilter} sortBy={sortBy} setSortBy={setSortBy} searchQuery={searchQuery} setSearchQuery={setSearchQuery} openDropdown={openDropdown} toggleDropdown={toggleDropdown} closeDropdowns={closeDropdowns} isDarkMode={isDarkMode} />
-              </ScrollAnimate>
-            </div>
+            <ScrollAnimate animation="fade-up" delay={100}>
+              <ProfileHeaderCard 
+                user={userData} 
+                isDarkMode={isDarkMode} 
+                onImageSelect={handleAutoUploadImage}
+                onProfessionChange={handleAutoSaveProfession}
+                isUploadingAvatar={isUploadingAvatar}
+              />
+            </ScrollAnimate>
 
-            <div className="relative z-10">
-              <ScrollAnimate animation="fade-up" delay={200}>
-                <div className={`${cardStyle} flex flex-col gap-3 min-h-[350px]`}>
-                  {loading ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400 gap-2">
-                      <Loader2 size={30} className="animate-spin text-purple-600" />
-                      <span className="text-xs font-bold">Memuat daftar tugas...</span>
-                    </div>
-                  ) : filteredTasks.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <CheckCircle2 size={40} className={`mb-2 ${isDarkMode ? "text-slate-700" : "text-slate-300"}`} />
-                      <p className={`text-sm font-bold ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Tidak ada tugas yang sesuai ☕</p>
-                    </div>
-                  ) : (
-                    filteredTasks.map(task => (
-                      <TaskItem key={task.id} task={task} onToggleDone={handleToggleTaskDone} onEdit={handleOpenEditModal} onDelete={handleDeleteTask} isDarkMode={isDarkMode} />
-                    ))
-                  )}
-                </div>
-              </ScrollAnimate>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <div className="flex flex-col gap-6">
+                <ScrollAnimate animation="fade-up" delay={150}>
+                  <PersonalInfoSection user={userData} onSave={handleSaveBioOnly} isDarkMode={isDarkMode} isSaving={isSavingBio} />
+                </ScrollAnimate>
+
+                <ScrollAnimate animation="fade-up" delay={200} className="flex-1">
+                  <div className="h-full"><ActiveSessionsSection isDarkMode={isDarkMode} /></div>
+                </ScrollAnimate>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <ScrollAnimate animation="fade-up" delay={150} className="flex-1">
+                  <PreferencesSection isDarkMode={isDarkMode} />
+                </ScrollAnimate>
+
+                <ScrollAnimate animation="fade-up" delay={200}>
+                  <div className="h-full"><SecurityDangerSection onLogout={onLogout} isDarkMode={isDarkMode} /></div>
+                </ScrollAnimate>
+              </div>
             </div>
           </main>
         </div>
       </div>
-
-      <TaskModal isOpen={isModalOpen} mode={modalMode} taskToEdit={taskToEdit} onClose={() => setIsModalOpen(false)} onSuccess={fetchInitialData} isDarkMode={isDarkMode} userSettings={userSettings} />
     </div>
   );
 }
