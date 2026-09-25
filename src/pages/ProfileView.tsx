@@ -89,21 +89,26 @@ export default function ProfileView({
           // Buang titik ekstensinya buat dapetin ID murni
           const public_id = lastSegment.split('.')[0]; // Hasil akhir: "gchd7lxyeuvdirosn6u8"
 
-          // Eksekusi tembak backend lokal Cloudflare Pages
+                    // Eksekusi tembak backend lokal Cloudflare Pages
           fetch('/api/delete-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ public_id })
           })
-          .then(res => res.json())
-          .then(data => {
-            if (data.result === 'ok') {
-              console.log("Cloudinary: Foto lama musnah!");
-            } else {
-              alert(`Gagal Hapus Foto Lama!\n\nID Foto: ${public_id}\nAlasan: ${JSON.stringify(data)}`);
+          .then(async (res) => {
+            const textRaw = await res.text(); // Tangkap balasan mentah apapun bentuknya
+            try {
+              const data = JSON.parse(textRaw);
+              if (data.result === 'ok') {
+                alert(`SUKSES DEWA! 🎉\nFoto ID [${public_id}] resmi dimusnahkan dari Cloudinary! (Kalau masih ada di dashboard, itu cuma Cache/Bayangan. Coba refresh Cloudinary lu)`);
+              } else {
+                alert(`CLOUDINARY NOLAK! ❌\nID Foto: ${public_id}\nAlasan Cloudinary: ${JSON.stringify(data)}`);
+              }
+            } catch (e) {
+              alert(`BACKEND RUSAK/404! ⚠️\nStatus Code: ${res.status}\nBalasan Server: ${textRaw.substring(0, 150)}`);
             }
           })
-          .catch(err => console.error("Backend API tidak merespon:", err));
+          .catch(err => alert(`KONEKSI TERPUTUS! 📡\nError: ${err.message}`));
           
         } catch (err) {
           console.error("Gagal mengekstrak ID foto lama:", err);
