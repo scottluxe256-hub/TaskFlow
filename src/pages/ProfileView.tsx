@@ -87,15 +87,25 @@ export default function ProfileView({
           const folder = parts.pop(); 
           const public_id = folder === "upload" ? filename : `${folder}/${filename}`; 
 
-                      // Eksekusi tembak backend lokal Cloudflare Pages
+          // Eksekusi tembak backend lokal Cloudflare Pages
             fetch('/api/delete-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ public_id })
             })
             .then(res => res.json())
-            .then(data => console.log("Status hapus Cloudinary:", data))
-            .catch(err => console.error("Backend gagal merespon:", err));
+            .then(data => {
+              if (data.result === 'ok') {
+                console.log("Cloudinary: Foto lama musnah!");
+              } else {
+                // Nah ini! Kalau gagal, pesan error asli dari Cloudinary bakal muncul di HP lu
+                alert(`Gagal Hapus Foto Lama!\n\nID Foto: ${public_id}\nAlasan: ${JSON.stringify(data)}`);
+              }
+            })
+            .catch(err => {
+              // Pop-up ini muncul kalau lu ngetes di localhost Termux
+              alert("Backend API Tidak Merespon!\n\nLu ngetes di Termux ya? Fitur hapus foto ini cuma jalan kalau dites di link web asli (.pages.dev) bro!");
+            });
             
           } catch (err) {
             console.error("Gagal mengekstrak ID foto lama:", err);
