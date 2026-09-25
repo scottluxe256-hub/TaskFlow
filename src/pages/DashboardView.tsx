@@ -130,7 +130,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     };
   }, [visibleTasks, todayTasks]);
 
-    const weeklyActivity = useMemo(() => {
+  const weeklyActivity = useMemo(() => {
     const daysLabel = ["M", "S", "S", "R", "K", "J", "S"];
     const now = new Date();
     const currentDayIdx = now.getDay();
@@ -141,13 +141,12 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       
-      // Tanggal target lokal (YYYY-MM-DD)
       const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       
       const countCompleted = tasks.filter(t => {
         if (!t.is_completed || !t.due_date) return false;
         
-        // SOLUSI: Konversi due_date UTC ke Date Lokal HP dulu
+        // Konversi due_date UTC ke Date Lokal HP
         const taskDate = new Date(t.due_date);
         const taskLocalStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, "0")}-${String(taskDate.getDate()).padStart(2, "0")}`;
         
@@ -190,7 +189,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
               </div>
             </ScrollAnimate>
 
-            {/* GRID UTAMA DIUBAH MENJADI items-stretch BIAR KOLOM KIRI & KANAN TINGGINYA SEJAJAR SAMA */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
               
               {/* KOLOM KIRI */}
@@ -220,7 +218,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
-                {/* KOTAK FOKUS HARI INI DIUBAH JADI flex-1 BIAR DINAMIS MENGIKUTI TINGGI KOLOM KANAN */}
                 <ScrollAnimate animation="fade-up" delay={200} className="flex-1 flex flex-col">
                   <div className={`flex flex-col flex-1 justify-between ${cardStyle}`}>
                     <div className="flex items-center justify-between mb-3 shrink-0">
@@ -228,7 +225,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                       <button type="button" onClick={() => setActiveTab("tasks")} className="text-xs font-bold text-purple-600 hover:text-purple-700 transition cursor-pointer">Lihat Semua</button>
                     </div>
                     
-                    {/* SCROLL INTERNAL JUGA DIUBAH JADI flex-1 */}
                     <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[140px]">
                       {loading ? (
                         <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400 animate-pulse">
@@ -279,6 +275,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                       <span className="text-rose-500">M</span><span>S</span><span>S</span><span>R</span><span>K</span><span>J</span><span>S</span>
                     </div>
 
+                    {/* MODEL KOTAK PRESISI DISESUAIKAN DENGAN KALENDER UTAMA */}
                     {(() => {
                       const currentYear = time.getFullYear();
                       const currentMonth = time.getMonth();
@@ -289,25 +286,30 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                       return (
                         <div className={`grid grid-cols-7 gap-1 text-center text-xs font-bold ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
                           {Array.from({ length: firstDayOffset }).map((_, i) => (
-                            <div key={`empty-${i}`} className="aspect-square" />
+                            <div key={`empty-${i}`} className="flex items-center justify-center p-0.5">
+                              <div className="w-8 h-8 sm:w-9 sm:h-9" />
+                            </div>
                           ))}
 
                           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((date) => {
                             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
                             const isSunday = new Date(currentYear, currentMonth, date).getDay() === 0;
                             const isHoliday = holidays.includes(dateStr);
+                            const isToday = date === time.getDate();
 
                             return (
-                              <div
-                                key={date}
-                                className={`aspect-square rounded-lg flex items-center justify-center cursor-pointer transition ${date === time.getDate()
-                                    ? "bg-purple-600 text-white font-black"
-                                    : (isSunday || isHoliday)
-                                      ? (isDarkMode ? "text-rose-400 hover:bg-slate-800" : "text-rose-500 hover:bg-slate-100")
-                                      : (isDarkMode ? "hover:bg-slate-800" : "hover:bg-slate-100")
+                              <div key={date} className="flex items-center justify-center p-0.5">
+                                <div
+                                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
+                                    isToday
+                                      ? "bg-purple-600 text-white font-black shadow-md shadow-purple-500/30"
+                                      : (isSunday || isHoliday)
+                                        ? (isDarkMode ? "text-rose-400 hover:bg-slate-800" : "text-rose-500 hover:bg-slate-100")
+                                        : (isDarkMode ? "hover:bg-slate-800" : "hover:bg-slate-100")
                                   }`}
-                              >
-                                {date}
+                                >
+                                  {date}
+                                </div>
                               </div>
                             );
                           })}
@@ -317,7 +319,6 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
                   </div>
                 </ScrollAnimate>
 
-                {/* AKTIVITAS MINGGU INI DIUBAH JADI flex-1 BIAR BISA MELAR SEJAJAR SAMA KOTAK KIRI */}
                 <ScrollAnimate animation="fade-up" delay={250} className="flex-1 flex flex-col">
                   <div className={`flex flex-col flex-1 justify-between min-h-[210px] ${cardStyle}`}>
                     <h2 className={`font-extrabold text-base mb-1 shrink-0 ${isDarkMode ? "text-white" : "text-slate-900"}`}>Aktivitas Minggu Ini</h2>
