@@ -62,7 +62,6 @@ export default function Sidebar({
         return;
       }
 
-      // 1. Ambil daftar tugas user untuk melacak kategori mana yang BENAR-BENAR DIGUNAKAN
       const { data: tasksData } = await supabase
         .from("tasks")
         .select("category_id")
@@ -70,7 +69,6 @@ export default function Sidebar({
 
       const usedCategoryIds = new Set((tasksData || []).map(t => t.category_id).filter(Boolean));
 
-      // 2. Ambil semua kategori user dari database
       const { data, error } = await supabase
         .from("categories")
         .select("*")
@@ -85,7 +83,6 @@ export default function Sidebar({
 
         const combined = [...defaultCategories, ...sanitizedData];
 
-        // FILTER PINTAR: Hanya tampilkan jika Default ATAU Kategori Kustom yang PUNYA TUGAS
         const filtered = combined.filter(cat => {
           const isDefault = defaultCategories.some(def => def.name.toLowerCase() === cat.name.toLowerCase());
           const isUsedByTask = usedCategoryIds.has(cat.id);
@@ -109,7 +106,6 @@ export default function Sidebar({
   useEffect(() => {
     fetchCategories();
 
-    // Listener Realtime agar Sidebar otomatis bersih saat tugas ditambah/dihapus
     const channel = supabase
       .channel("realtime-sidebar-categories")
       .on(
@@ -157,13 +153,16 @@ export default function Sidebar({
         />
       )}
 
-      <aside className={`fixed md:sticky top-0 left-0 h-screen w-64 border-r flex flex-col justify-between shrink-0 z-30 overflow-y-auto custom-scrollbar transition-all duration-300 ${isDarkMode
+      {/* STRUKTUR DIPERBAIKI: h-[100dvh] & overflow-y-auto dipindah ke div dalam */}
+      <aside className={`fixed md:sticky top-0 left-0 h-[100dvh] w-64 border-r flex flex-col shrink-0 z-30 transition-all duration-300 ${isDarkMode
           ? "bg-slate-900/85 backdrop-blur-md border-slate-800/80 shadow-[4px_0_20px_rgba(0,0,0,0.3)] text-slate-100"
           : "bg-white/85 backdrop-blur-md border-slate-200/80 shadow-[4px_0_20px_rgba(0,0,0,0.06)] text-slate-800"
         } ${isMobileMenuOpen ? "translate-x-0 z-50" : "-translate-x-full md:translate-x-0"
         }`}>
-        <div className="flex flex-col p-5">
-          <div className="flex items-center justify-between mb-8 px-2">
+        
+        {/* AREA ATAS: Bisa di-scroll berkat flex-1 dan overflow-y-auto */}
+        <div className="flex flex-col p-5 flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex items-center justify-between mb-8 px-2 shrink-0">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("dashboard")}>
               <img src="/assets/logo.webp" alt="TaskFlow" className="w-8 h-8 object-contain" />
               <span className={`text-xl font-extrabold tracking-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
@@ -173,7 +172,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`md:hidden p-1 cursor-pointer ${isDarkMode ? "text-slate-400 hover:text-purple-400" : "text-slate-500 hover:text-purple-600"}`}
+              className={`md:hidden p-1 cursor-pointer shrink-0 ${isDarkMode ? "text-slate-400 hover:text-purple-400" : "text-slate-500 hover:text-purple-600"}`}
             >
               <X size={20} />
             </button>
@@ -291,7 +290,8 @@ export default function Sidebar({
           </div>
         </div>
 
-        <div className={`p-5 border-t ${isDarkMode ? "border-slate-800/80" : "border-slate-200/80"}`}>
+        {/* AREA BAWAH: Dipaku permanen dengan shrink-0 */}
+        <div className={`p-5 border-t shrink-0 ${isDarkMode ? "border-slate-800/80" : "border-slate-200/80"}`}>
           <button
             type="button"
             onClick={onLogout}
