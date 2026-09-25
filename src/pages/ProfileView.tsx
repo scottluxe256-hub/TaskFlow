@@ -66,7 +66,7 @@ export default function ProfileView({
     fetchProfileData();
   }, []);
 
-    // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
+      // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
   const handleAutoUploadImage = async (file) => {
     setIsUploadingAvatar(true);
     try {
@@ -78,37 +78,29 @@ export default function ProfileView({
       if (!rawUrl) throw new Error("Gagal upload gambar ke Cloudinary");
       const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_avif");
 
-      // === EKSEKUSI HAPUS FOTO LAMA ===
+      // === EKSEKUSI HAPUS FOTO LAMA (JALUR SENYAP) ===
       const oldAvatarUrl = userData.avatarUrl;
       if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
         try {
-          // Trik Super Simpel: Potong URL berdasarkan garis miring, ambil yang paling ujung
           const urlParts = oldAvatarUrl.split('/');
-          const lastSegment = urlParts[urlParts.length - 1]; // Contoh dapet: "gchd7lxyeuvdirosn6u8.avif"
-          
-          // Buang titik ekstensinya buat dapetin ID murni
-          const public_id = lastSegment.split('.')[0]; // Hasil akhir: "gchd7lxyeuvdirosn6u8"
+          const lastSegment = urlParts[urlParts.length - 1]; 
+          const public_id = lastSegment.split('.')[0]; 
 
-                    // Eksekusi tembak backend lokal Cloudflare Pages
+          // Eksekusi tembak backend lokal Cloudflare Pages (Tanpa Pop-up Alert)
           fetch('/api/delete-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ public_id })
           })
-          .then(async (res) => {
-            const textRaw = await res.text(); // Tangkap balasan mentah apapun bentuknya
-            try {
-              const data = JSON.parse(textRaw);
-              if (data.result === 'ok') {
-                alert(`SUKSES DEWA! 🎉\nFoto ID [${public_id}] resmi dimusnahkan dari Cloudinary! (Kalau masih ada di dashboard, itu cuma Cache/Bayangan. Coba refresh Cloudinary lu)`);
-              } else {
-                alert(`CLOUDINARY NOLAK! ❌\nID Foto: ${public_id}\nAlasan Cloudinary: ${JSON.stringify(data)}`);
-              }
-            } catch (e) {
-              alert(`BACKEND RUSAK/404! ⚠️\nStatus Code: ${res.status}\nBalasan Server: ${textRaw.substring(0, 150)}`);
+          .then(res => res.json())
+          .then(data => {
+            if (data.result === 'ok') {
+              console.log(`Foto lama [${public_id}] berhasil dimusnahkan di background.`);
+            } else {
+              console.warn("Gagal hapus foto di background:", data);
             }
           })
-          .catch(err => alert(`KONEKSI TERPUTUS! 📡\nError: ${err.message}`));
+          .catch(err => console.error("Backend gagal diakses:", err));
           
         } catch (err) {
           console.error("Gagal mengekstrak ID foto lama:", err);
@@ -122,6 +114,8 @@ export default function ProfileView({
 
       // Update UI
       setUserData((prev) => ({ ...prev, avatarUrl: finalAvatarUrl }));
+      
+      // Pop-up SweetAlert andalan lu tetap hidup
       showSuccessAlert("Foto Diperbarui!", "Foto profil Anda berhasil diubah.", isDarkMode);
 
     } catch (error) {
