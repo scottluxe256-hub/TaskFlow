@@ -130,7 +130,7 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     };
   }, [visibleTasks, todayTasks]);
 
-  const weeklyActivity = useMemo(() => {
+    const weeklyActivity = useMemo(() => {
     const daysLabel = ["M", "S", "S", "R", "K", "J", "S"];
     const now = new Date();
     const currentDayIdx = now.getDay();
@@ -140,9 +140,20 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
+      
+      // Tanggal target lokal (YYYY-MM-DD)
       const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       
-      const countCompleted = tasks.filter(t => t.is_completed && t.due_date && t.due_date.startsWith(dStr)).length;
+      const countCompleted = tasks.filter(t => {
+        if (!t.is_completed || !t.due_date) return false;
+        
+        // SOLUSI: Konversi due_date UTC ke Date Lokal HP dulu
+        const taskDate = new Date(t.due_date);
+        const taskLocalStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, "0")}-${String(taskDate.getDate()).padStart(2, "0")}`;
+        
+        return taskLocalStr === dStr;
+      }).length;
+
       return { day: daysLabel[d.getDay()], val: countCompleted > 0 ? Math.min(countCompleted * 25, 100) : 10 };
     });
   }, [tasks]);
