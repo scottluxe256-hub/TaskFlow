@@ -82,30 +82,33 @@ export default function ProfileView({
       const oldAvatarUrl = userData.avatarUrl;
       if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
         try {
-          // Trik Regex Dewa: Ambil teks APAPUN setelah '/v(angka)/' dan sebelum titik ekstensi
-          const match = oldAvatarUrl.match(/\/v\d+\/(.+?)\.[a-zA-Z0-9]+$/);
+                // === EKSEKUSI HAPUS FOTO LAMA ===
+      const oldAvatarUrl = userData.avatarUrl;
+      if (oldAvatarUrl && oldAvatarUrl.includes("cloudinary.com")) {
+        try {
+          // Trik Super Simpel: Potong URL berdasarkan garis miring, ambil yang paling ujung
+          const urlParts = oldAvatarUrl.split('/');
+          const lastSegment = urlParts[urlParts.length - 1]; // Contoh dapet: "gchd7lxyeuvdirosn6u8.avif"
           
-          if (match && match[1]) {
-            const public_id = match[1]; // Hasilnya bakal murni: "dicsssijep88qz9bax78"
+          // Buang titik ekstensinya buat dapetin ID murni
+          const public_id = lastSegment.split('.')[0]; // Hasil akhir: "gchd7lxyeuvdirosn6u8"
 
-            // Eksekusi tembak backend lokal Cloudflare Pages
-            fetch('/api/delete-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ public_id })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.result === 'ok') {
-                console.log("Cloudinary: Foto lama berhasil musnah!");
-              } else {
-                alert(`Gagal Hapus Foto Lama!\n\nID Foto: ${public_id}\nAlasan: ${JSON.stringify(data)}`);
-              }
-            })
-            .catch(err => console.error("Backend API tidak merespon:", err));
-          } else {
-            console.warn("Format URL Cloudinary tidak dikenali oleh Regex.");
-          }
+          // Eksekusi tembak backend lokal Cloudflare Pages
+          fetch('/api/delete-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ public_id })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.result === 'ok') {
+              console.log("Cloudinary: Foto lama musnah!");
+            } else {
+              alert(`Gagal Hapus Foto Lama!\n\nID Foto: ${public_id}\nAlasan: ${JSON.stringify(data)}`);
+            }
+          })
+          .catch(err => console.error("Backend API tidak merespon:", err));
+          
         } catch (err) {
           console.error("Gagal mengekstrak ID foto lama:", err);
         }
