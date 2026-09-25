@@ -30,17 +30,18 @@ export default function ProfileView({
     stats: { totalXP: "0 XP", profession: "Pelajar", joinedDate: "" }
   });
 
-  // 1. TARIK DATA AWAL
+  // 1. TARIK DATA AWAL (Lebih Cepat, Gak Ngitung Tugas Lagi)
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Cukup tarik data profil saja
         const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-        const { count } = await supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_completed", true);
 
-        const xp = (count || 0) * 10;
+        // Tarik XP permanen dari profil (jika belum ada, default 0)
+        const xp = profile?.total_xp || 0;
         let badgeName = xp > 1000 ? "Mastermind" : xp > 200 ? "Executor" : "Initiator";
 
         const joinDate = new Date(profile?.created_at || user.created_at).toLocaleDateString("id-ID", { month: "short", year: "numeric" });
@@ -66,14 +67,13 @@ export default function ProfileView({
     fetchProfileData();
   }, []);
 
-      // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
+  // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
   const handleAutoUploadImage = async (file) => {
     setIsUploadingAvatar(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Upload ke Cloudinary
       const rawUrl = await uploadToCloudinary(file);
       if (!rawUrl) throw new Error("Gagal upload gambar ke Cloudinary");
       const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_avif");
@@ -86,7 +86,6 @@ export default function ProfileView({
           const lastSegment = urlParts[urlParts.length - 1]; 
           const public_id = lastSegment.split('.')[0]; 
 
-          // Eksekusi tembak backend lokal Cloudflare Pages (Tanpa Pop-up Alert)
           fetch('/api/delete-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -106,16 +105,11 @@ export default function ProfileView({
           console.error("Gagal mengekstrak ID foto lama:", err);
         }
       }
-      // ================================
 
-      // Langsung simpan URL baru ke Supabase
       const { error } = await supabase.from("profiles").update({ avatar_url: finalAvatarUrl }).eq("id", user.id);
       if (error) throw error;
 
-      // Update UI
       setUserData((prev) => ({ ...prev, avatarUrl: finalAvatarUrl }));
-      
-      // Pop-up SweetAlert andalan lu tetap hidup
       showSuccessAlert("Foto Diperbarui!", "Foto profil Anda berhasil diubah.", isDarkMode);
 
     } catch (error) {
@@ -193,7 +187,6 @@ export default function ProfileView({
 
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
           
-          {/* AVATAR URL DITAMBAHKAN DI SINI */}
           <Header 
             setIsMobileMenuOpen={setIsMobileMenuOpen} 
             userName={userData.name} 
