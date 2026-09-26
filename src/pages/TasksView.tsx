@@ -10,7 +10,7 @@ import TaskModal from "../components/TaskModal";
 import { supabase } from "../lib/supabase";
 import { Task } from "../types";
 import { ActiveTabType } from "../App";
-import { showDeleteConfirm, showSuccessAlert } from "../utils/sweetalert"; // Tambahan showSuccessAlert
+import { showDeleteConfirm, showSuccessAlert } from "../utils/sweetalert"; 
 
 export interface TasksViewProps {
   activeTab: ActiveTabType;
@@ -67,7 +67,6 @@ export default function TasksView(props: TasksViewProps) {
         });
       }
 
-      // Tarik tugas yang TIDAK disembunyikan (is_hidden = false)
       const { data, error } = await supabase
         .from("tasks")
         .select("*, categories(name, color), category:categories(name, color)")
@@ -99,20 +98,38 @@ export default function TasksView(props: TasksViewProps) {
   const handleToggleTaskDone = async (id: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
 
-    if (newStatus === true) {
-      // Alert pas tugas di-ceklis
-      showSuccessAlert("Tugas Selesai! 🎉", "Kerja bagus! Satu tugas berhasil diselesaikan.", isDarkMode);
-      
-      if (userSettings.autoDelete) {
-        // Soft Delete (Sembunyikan) tugas biar grafik dashboard tetep hidup
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Update UI lokal
+      if (!(newStatus && userSettings.autoDelete)) {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, is_completed: newStatus } : t));
+      }
+
+      // Update tabel tasks
+      if (newStatus && userSettings.autoDelete) {
         setTasks(prev => prev.filter(t => t.id !== id));
         await supabase.from("tasks").update({ is_hidden: true, is_completed: true }).eq("id", id);
-        return; 
+      } else {
+        await supabase.from("tasks").update({ is_completed: newStatus }).eq("id", id);
       }
-    }
 
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, is_completed: newStatus } : t));
-    await supabase.from("tasks").update({ is_completed: newStatus }).eq("id", id);
+      // LOGIKA TAMBAH/KURANG XP MANUAL
+      const { data: profile } = await supabase.from("profiles").select("total_xp").eq("id", user.id).single();
+      if (profile) {
+        const currentXp = profile.total_xp || 0;
+        const newXp = Math.max(0, newStatus ? currentXp + 10 : currentXp - 10);
+        await supabase.from("profiles").update({ total_xp: newXp }).eq("id", user.id);
+      }
+
+      if (newStatus === true) {
+        showSuccessAlert("Tugas Selesai! 🎉", "Kerja bagus! Satu tugas berhasil diselesaikan. (+10 XP)", isDarkMode);
+      }
+
+    } catch (error) {
+      console.error("Gagal update tugas atau XP:", error);
+    }
   };
 
   const handleDeleteTask = (id: string) => {
@@ -122,7 +139,6 @@ export default function TasksView(props: TasksViewProps) {
     showDeleteConfirm(
       title,
       async () => {
-        // Soft Delete manual
         setTasks(prev => prev.filter(t => t.id !== id));
         const { error } = await supabase.from("tasks").update({ is_hidden: true }).eq("id", id);
         if (error) fetchInitialData();
