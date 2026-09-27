@@ -30,17 +30,15 @@ export default function ProfileView({
     stats: { totalXP: "0 XP", profession: "Pelajar", joinedDate: "" }
   });
 
-  // 1. TARIK DATA AWAL (Lebih Cepat, Gak Ngitung Tugas Lagi)
+  // 1. TARIK DATA AWAL & KABEL REAL-TIME
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Cukup tarik data profil saja
         const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
-        // Tarik XP permanen dari profil (jika belum ada, default 0)
         const xp = profile?.total_xp || 0;
         let badgeName = xp > 1000 ? "Mastermind" : xp > 200 ? "Executor" : "Initiator";
 
@@ -64,7 +62,24 @@ export default function ProfileView({
         setLoadingInitial(false);
       }
     };
+    
     fetchProfileData();
+
+    // <-- TAMBAHAN KABEL REAL-TIME WEB -->
+    const profileChannel = supabase
+      .channel("realtime-profiles-view")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles" },
+        () => {
+          fetchProfileData(); // Tarik data baru otomatis kalau ada perubahan dari Mobile
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
   }, []);
 
   // 2. AUTO-UPLOAD FOTO & HAPUS FOTO LAMA VIA CLOUDFLARE
@@ -76,7 +91,9 @@ export default function ProfileView({
 
       const rawUrl = await uploadToCloudinary(file);
       if (!rawUrl) throw new Error("Gagal upload gambar ke Cloudinary");
-      const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_avif");
+      
+      // PERBAIKAN: Gunakan f_webp agar bisa dibaca web dan mobile
+      const finalAvatarUrl = getOptimizedImageUrl(rawUrl, "f_webp");
 
       // === EKSEKUSI HAPUS FOTO LAMA (JALUR SENYAP) ===
       const oldAvatarUrl = userData.avatarUrl;

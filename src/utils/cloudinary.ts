@@ -19,7 +19,7 @@ export const uploadToCloudinary = async (file: File): Promise<string | null> => 
   }
 };
 
-export const getOptimizedImageUrl = (url: string, format = "f_avif"): string => {
+export const getOptimizedImageUrl = (url: string, format = "f_webp"): string => {
   if (!url) return "";
   
   // c_thumb  = Crop gambar jadi thumbnail
