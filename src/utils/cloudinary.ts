@@ -23,7 +23,7 @@ export const getOptimizedImageUrl = (url: string, format = "f_webp"): string => 
   if (!url) return "";
   
   // c_thumb  = Crop gambar jadi thumbnail
-  // g_auto   = AI Cerdas: Cari wajah dulu, kalau gagal, cari objek paling mencolok (cocok buat 2D/Anime)
+  // g_face   = AI Cerdas: Cari wajah dulu, kalau gagal, cari objek paling mencolok (cocok buat 2D/Anime)
   // w_400, h_400 = Ubah ukuran fix jadi 400x400 pixel
   const optimizationParams = `c_thumb,g_auto,w_400,h_400,${format}`;
   
