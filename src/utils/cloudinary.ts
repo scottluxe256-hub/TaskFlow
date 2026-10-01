@@ -1,6 +1,6 @@
 export const uploadToCloudinary = async (file: File): Promise<string | null> => {
-  const CLOUD_NAME = "z1awtcu6"; // Ganti dengan cloud name lu
-  const UPLOAD_PRESET = "taskflow_profil"; // Ganti dengan preset lu
+  const CLOUD_NAME = "z1awtcu6"; // Ganti dengan cloud name kamu
+  const UPLOAD_PRESET = "taskflow_profil"; // Ganti dengan preset kamu
 
   const formData = new FormData();
   formData.append("file", file);
@@ -11,21 +11,32 @@ export const uploadToCloudinary = async (file: File): Promise<string | null> => 
       method: "POST",
       body: formData,
     });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed with status: ${res.status}`);
+    }
+
     const data = await res.json();
-    return data.secure_url;
+    return data.secure_url || null;
   } catch (error) {
-    console.error("Gagal upload:", error);
+    console.error("Gagal upload ke Cloudinary:", error);
     return null;
   }
 };
 
-export const getOptimizedImageUrl = (url: string, format = "f_webp"): string => {
-  if (!url) return "";
+export const getOptimizedImageUrl = (
+  url: string, 
+  width = 400, 
+  height = 400, 
+  format = "f_auto,q_auto"
+): string => {
+  if (!url || !url.includes("/upload/")) return url || "";
   
-  // c_thumb  = Crop gambar jadi thumbnail
-  // g_face   = AI Cerdas: Cari wajah dulu, kalau gagal, cari objek paling mencolok (cocok buat 2D/Anime)
-  // w_400, h_400 = Ubah ukuran fix jadi 400x400 pixel
-  const optimizationParams = `c_thumb,g_auto,w_400,h_400,${format}`;
+  // c_fill   = Memotong gambar dengan fokus pada area target tanpa distorsi
+  // g_faces  = Deteksi khusus wajah manusia (g_faces mendeteksi banyak/semua wajah)
+  // f_auto   = Format otomatis paling optimal (WebP, AVIF, dll. tergantung browser)
+  // q_auto   = Kompresi kualitas gambar otomatis tanpa merusak visual
+  const optimizationParams = `c_fill,g_faces,w_${width},h_${height},${format}`;
   
   return url.replace("/upload/", `/upload/${optimizationParams}/`);
 };
