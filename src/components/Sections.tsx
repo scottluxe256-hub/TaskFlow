@@ -50,9 +50,14 @@ export function HeroSection({ onStart, handleDownloadApp }) {
           <button onClick={onStart} className="w-full sm:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
             Mulai Pakai TaskFlow <ArrowRight size={16} />
           </button>
-          <button onClick={handleDownloadApp} className="w-full sm:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-white/90 text-slate-800 font-bold text-xs sm:text-sm rounded-xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50 cursor-pointer">
-            <Download size={16} className="text-purple-600" /> Download App
-          </button>
+          <a 
+  href="https://github.com/scottluxe256-hub/taskflowflutter/releases/download/v1.0.0/Task.Flow.apk" 
+  target="_blank"
+  rel="noopener noreferrer"
+  className="w-full sm:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-white/90 text-slate-800 font-bold text-xs sm:text-sm rounded-xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50 cursor-pointer"
+>
+  <Download size={16} className="text-purple-600" /> Download App
+</a>
         </motion.div>
       </div>
     </section>
