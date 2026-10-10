@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
+import OneSignal from "react-onesignal"; // 👈 Import OneSignal
 import LandingPage from "./pages/LandingPage";
 import AuthPages from "./pages/AuthPages";
 import DashboardView from "./pages/DashboardView";
@@ -48,12 +49,31 @@ export default function App() {
     }
   }, []);
 
-  // 2. Simpan preferensi pengguna ke localStorage
+  // 2. Inisialisasi OneSignal saat pertama kali web dibuka
+  useEffect(() => {
+    const initOneSignal = async () => {
+      try {
+        await OneSignal.init({
+          appId: "f5b62e2b-9ecd-4d42-8cfb-6cc19e269cad", // 👈 Masukkan OneSignal App ID kamu di sini
+          allowLocalhostAsSecureOrigin: true, // Supaya bisa dites via localhost/Termux
+        });
+
+        // Tampilkan pop-up / slide permintaan izin notifikasi ke browser
+        await OneSignal.Slidedown.promptPush();
+      } catch (err) {
+        console.error("Gagal inisialisasi OneSignal:", err);
+      }
+    };
+
+    initOneSignal();
+  }, []);
+
+  // 3. Simpan preferensi pengguna ke localStorage
   useEffect(() => {
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
 
-  // 3. Pasang kelas 'dark' pada HTML HANYA jika pengguna berada di area Dashboard
+  // 4. Pasang kelas 'dark' pada HTML HANYA jika pengguna berada di area Dashboard
   useEffect(() => {
     if (session && page === "dashboard" && isDarkMode) {
       document.documentElement.classList.add("dark");
@@ -62,11 +82,27 @@ export default function App() {
     }
   }, [isDarkMode, session, page]);
 
-  // 4. Deteksi & Listener Auth Supabase (SUDAH DIPERBAIKI UNTUK GOOGLE OAUTH)
+  // 5. Deteksi & Listener Auth Supabase (termasuk sync User ID ke OneSignal)
   useEffect(() => {
     // Listener Perubahan Status Auth Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
+
+      // Sinkronisasi status user ke OneSignal
+      if (currentSession?.user) {
+        try {
+          await OneSignal.login(currentSession.user.id);
+          console.log("OneSignal terhubung dengan User ID:", currentSession.user.id);
+        } catch (err) {
+          console.error("Gagal login OneSignal:", err);
+        }
+      } else if (event === "SIGNED_OUT") {
+        try {
+          await OneSignal.logout();
+        } catch (err) {
+          console.error("Gagal logout OneSignal:", err);
+        }
+      }
 
       // Tangkap event spesifik reset password dari Supabase
       if (event === "PASSWORD_RECOVERY") {
@@ -83,9 +119,14 @@ export default function App() {
     });
 
     // Cek session awal saat app pertama kali dibuka
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      if (session) {
+      if (session?.user) {
+        try {
+          await OneSignal.login(session.user.id);
+        } catch (err) {
+          console.error("Gagal login OneSignal:", err);
+        }
         setPage((prevPage) => (prevPage === "reset" ? "reset" : "dashboard"));
       } else {
         setPage((prevPage) => (prevPage === "reset" ? "reset" : "landing"));
@@ -99,6 +140,11 @@ export default function App() {
   const handleStartAuth = () => setPage("login");
 
   const handleLogout = async () => {
+    try {
+      await OneSignal.logout();
+    } catch (err) {
+      console.error("Gagal logout OneSignal:", err);
+    }
     await supabase.auth.signOut();
     setSession(null);
     setIsRecoveryMode(false);
@@ -131,12 +177,13 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-300 ${isDashboardArea
+      className={`min-h-screen transition-colors duration-300 ${
+        isDashboardArea
           ? isDarkMode
             ? "bg-slate-950 text-slate-200"
             : "bg-slate-50 text-slate-800"
           : "bg-transparent text-slate-800"
-        }`}
+      }`}
     >
       {!session && page === "landing" && (
         <LandingPage

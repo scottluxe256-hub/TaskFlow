@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabase";
-import { requestFcmToken } from "../../services/firebase"; // File helper FCM yang kita buat sebelumnya
+import OneSignal from "react-onesignal"; // 👈 Pakai OneSignal, ganti helper firebase lama
 
 const REMINDER_OPTIONS = [
   { value: "15 Menit", label: "15 Menit" },
@@ -70,34 +70,29 @@ export default function ActiveSessionsSection({ isDarkMode }: ActiveSessionsSect
     }
   };
 
-  // 3. Toggle Reminder + Ambil FCM Token otomatis
-    const handleToggleReminder = async () => {
+  // 3. Toggle Reminder terhubung OneSignal
+  const handleToggleReminder = async () => {
     const newVal = !defaults.reminderEnabled;
 
     if (newVal) {
-      const token = await requestFcmToken();
+      try {
+        // Minta izin notifikasi browser via OneSignal jika belum diizinkan
+        await OneSignal.Notifications.requestPermission();
+      } catch (err) {
+        console.warn("Prompt OneSignal:", err);
+      }
 
-      if (!token) {
-        alert("Izin notifikasi ditolak di browser. Aktifin dulu di address bar ya!");
-        return;
+      // Pastikan User ID Supabase terhubung ke OneSignal
+      if (userId) {
+        try {
+          await OneSignal.login(userId);
+        } catch (err) {
+          console.error("Gagal login OneSignal:", err);
+        }
       }
 
       setDefaults((prev) => ({ ...prev, reminderEnabled: true }));
-      
-      // Update status reminder di profile
       updatePreference({ reminder_enabled: true });
-
-      // Simpan / update token FCM ke tabel user_fcm_tokens
-      if (userId) {
-        const { error } = await supabase
-          .from("user_fcm_tokens")
-          .upsert(
-            { user_id: userId, fcm_token: token },
-            { onConflict: "fcm_token" }
-          );
-
-        if (error) console.error("Gagal nyimpen token FCM:", error);
-      }
     } else {
       setDefaults((prev) => ({ ...prev, reminderEnabled: false }));
       updatePreference({ reminder_enabled: false });
