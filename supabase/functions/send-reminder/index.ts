@@ -1,46 +1,64 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID")!;
-const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY")!;
+const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
+const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (_req) => {
   try {
+    // 1. Cek ketersediaan Secrets OneSignal
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error: "ONESIGNAL_APP_ID atau ONESIGNAL_REST_API_KEY belum disetel di Supabase Secrets!",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Cari tugas yang deadline-nya sudah lewat/pas dan belum dikirimi notif
+    // 2. Ambil tugas yang belum selesai dan sudah masuk/melewati tenggat waktu
     const now = new Date().toISOString();
     const { data: tasks, error: tasksError } = await supabase
       .from("tasks")
       .select("id, title, user_id, due_date")
-      .eq("reminder_sent", false)
-      .eq("is_completed", false) // 👈 Gunakan is_completed
+      .or("reminder_sent.is.null,reminder_sent.eq.false")
+      .eq("is_completed", false)
       .lte("due_date", now);
 
     if (tasksError) throw tasksError;
 
     if (!tasks || tasks.length === 0) {
-      return new Response(JSON.stringify({ message: "Tidak ada task yang perlu diingatkan" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ message: "Tidak ada task yang perlu diingatkan saat ini" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
     }
+
+    // 3. Format header Authorization OneSignal (mendukung token os_v2_ maupun legacy)
+    const cleanKey = ONESIGNAL_REST_API_KEY.trim();
+    const authHeader = cleanKey.startsWith("Key ") || cleanKey.startsWith("Basic ")
+      ? cleanKey
+      : cleanKey.startsWith("os_v2_")
+      ? `Key ${cleanKey}`
+      : `Basic ${cleanKey}`;
 
     const results = [];
 
-    // Tembak notifikasi per tugas
+    // 4. Kirim notifikasi per tugas ke User ID Supabase terkait
     for (const task of tasks) {
-      const pushResponse = await fetch("https://onesignal.com/api/v1/notifications", {
+      const pushResponse = await fetch("https://api.onesignal.com/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`,
+          "Authorization": authHeader,
         },
         body: JSON.stringify({
           app_id: ONESIGNAL_APP_ID,
           include_aliases: {
-            external_id: [task.user_id], // Nembak langsung ke ID akun Supabase
+            external_id: [task.user_id],
           },
           target_channel: "push",
           headings: { en: "⏰ Reminder TaskFlow!" },
@@ -50,7 +68,7 @@ Deno.serve(async (_req) => {
 
       const pushResult = await pushResponse.json();
 
-      // Tandai sukses biar gak dispam
+      // Tandai task sudah diproses agar tidak dikirim ulang
       await supabase
         .from("tasks")
         .update({ reminder_sent: true })
