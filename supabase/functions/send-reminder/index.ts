@@ -15,7 +15,7 @@ Deno.serve(async (_req) => {
       .from("tasks")
       .select("id, title, user_id, due_date")
       .eq("reminder_sent", false)
-      .eq("completed", false)
+      .eq("is_completed", false) // 👈 Gunakan is_completed
       .lte("due_date", now);
 
     if (tasksError) throw tasksError;
