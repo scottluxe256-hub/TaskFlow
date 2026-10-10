@@ -54,11 +54,21 @@ export default function App() {
     const initOneSignal = async () => {
       try {
         await OneSignal.init({
-          appId: "f5b62e2b-9ecd-4d42-8cfb-6cc19e269cad", // 👈 Masukkan OneSignal App ID kamu di sini
-          allowLocalhostAsSecureOrigin: true, // Supaya bisa dites via localhost/Termux
+          appId: "f5b62e2b-9ecd-4d42-8cfb-6cc19e269cad", // 👈 Masukkan OneSignal App ID kamu di sini[span_2](start_span)[span_2](end_span)
+          allowLocalhostAsSecureOrigin: true, // Supaya bisa dites via localhost/Termux[span_3](start_span)[span_3](end_span)
         });
 
-        // Tampilkan pop-up / slide permintaan izin notifikasi ke browser
+        // 👇 TAMBAHAN: Listener untuk notifikasi saat web terbuka (foreground)
+        OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
+          const notif = event.notification;
+          console.log("Notifikasi Foreground Masuk:", notif.title, notif.body);
+          
+          // Opsional: Jika kamu punya komponen Toast UI sendiri (misal react-toastify), 
+          // kamu bisa panggil di sini, lalu cegah banner bawaan browser dengan event.preventDefault();
+          // event.preventDefault(); 
+        });
+
+        // Tampilkan pop-up / slide permintaan izin notifikasi ke browser[span_4](start_span)[span_4](end_span)
         await OneSignal.Slidedown.promptPush();
       } catch (err) {
         console.error("Gagal inisialisasi OneSignal:", err);

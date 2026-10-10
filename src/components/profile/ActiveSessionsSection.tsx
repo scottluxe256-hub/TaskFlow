@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabase";
-import OneSignal from "react-onesignal"; // 👈 Pakai OneSignal, ganti helper firebase lama
+import OneSignal from "react-onesignal";
 
 const REMINDER_OPTIONS = [
   { value: "15 Menit", label: "15 Menit" },
@@ -70,7 +70,7 @@ export default function ActiveSessionsSection({ isDarkMode }: ActiveSessionsSect
     }
   };
 
-  // 3. Toggle Reminder terhubung OneSignal
+  // 3. Toggle Reminder terhubung OneSignal (Diperbarui dengan optIn & optOut)
   const handleToggleReminder = async () => {
     const newVal = !defaults.reminderEnabled;
 
@@ -78,6 +78,8 @@ export default function ActiveSessionsSection({ isDarkMode }: ActiveSessionsSect
       try {
         // Minta izin notifikasi browser via OneSignal jika belum diizinkan
         await OneSignal.Notifications.requestPermission();
+        // Aktifkan kembali langganan push (sinkron ke HP/Browser)
+        await OneSignal.User.PushSubscription.optIn();
       } catch (err) {
         console.warn("Prompt OneSignal:", err);
       }
@@ -94,6 +96,13 @@ export default function ActiveSessionsSection({ isDarkMode }: ActiveSessionsSect
       setDefaults((prev) => ({ ...prev, reminderEnabled: true }));
       updatePreference({ reminder_enabled: true });
     } else {
+      try {
+        // Nonaktifkan push di perangkat ini via OneSignal
+        await OneSignal.User.PushSubscription.optOut();
+      } catch (err) {
+        console.error("Gagal opt-out OneSignal:", err);
+      }
+
       setDefaults((prev) => ({ ...prev, reminderEnabled: false }));
       updatePreference({ reminder_enabled: false });
     }

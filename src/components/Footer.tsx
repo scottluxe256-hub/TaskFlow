@@ -103,11 +103,11 @@ export default function Footer({ handleDownloadApp }) {
             
             {/* Ikon-Ikon Sosmed Putih */}
             <div className="flex items-center space-x-4 text-white">
-              <a href="https://github.com/scottluxe256-hub/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaGithub size={16} /></a>
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTelegram size={16} /></a>
-              <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTiktok size={15} /></a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaInstagram size={16} /></a>
-              <a href="mailto:support@taskflow.app" className="hover:text-purple-400 transition-colors"><Mail size={16} /></a>
+              <a href="https://github.com/scottluxe256-hub" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaGithub size={16} /></a>
+              <a href="https://t.me/ishaqnirwasita256" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTelegram size={16} /></a>
+              <a href="https://www.tiktok.com/@scottbukansecott?_r=1&_t=ZS-9AQmjU9zjsb" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTiktok size={15} /></a>
+              <a href="https://www.instagram.com/ishaqnirwasita256/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaInstagram size={16} /></a>
+              <a href="mailto:syahrilking8@gmail.com" className="hover:text-purple-400 transition-colors"><Mail size={16} /></a>
             </div>
           </div>
         </div>
