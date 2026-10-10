@@ -8,6 +8,7 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
   const [isEditingProf, setIsEditingProf] = useState(false);
   const [profValue, setProfValue] = useState("");
 
+  // Pastikan input selalu singkron dengan data asli jika ada update dari database
   useEffect(() => {
     setProfValue(user.stats?.profession || "");
   }, [user.stats?.profession]);
@@ -23,9 +24,18 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
     }
   };
 
+  // Fungsi simpan otomatis saat kursor keluar (onBlur) atau tekan Enter
   const handleSaveProfesi = () => {
     setIsEditingProf(false);
-    if (profValue.trim() !== user.stats?.profession && profValue.trim() !== "") {
+    
+    // Jika input sengaja dikosongkan, batalkan edit dan kembalikan ke data awal
+    if (profValue.trim() === "") {
+      setProfValue(user.stats?.profession || "");
+      return;
+    }
+    
+    // Hanya eksekusi simpan ke database jika nilainya benar-benar berubah
+    if (profValue.trim() !== user.stats?.profession) {
       onProfessionChange(profValue.trim()); 
     }
   };
@@ -56,7 +66,7 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
           </button>
         </div>
 
-        {/* Info Singkat & Biodata (Udah dibalikin!) */}
+        {/* Info Singkat & Biodata */}
         <div className="flex-1 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <h2 className={`text-xl font-extrabold ${isDarkMode ? "text-white" : "text-slate-900"}`}>
@@ -71,7 +81,6 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
           <p className={`text-xs font-semibold mt-0.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
             @{user.username || "username"} • {user.email}
           </p>
-          {/* Ini baris Bio yang balik lagi */}
           <p className={`text-xs mt-2 line-clamp-2 max-w-lg ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
             {user.bio || "Belum ada bio. Ceritakan sedikit tentang diri Anda!"}
           </p>
@@ -90,12 +99,17 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
           </span>
         </div>
 
-        {/* FITUR KLIK UNTUK EDIT PROFESI (Udah di-center!) */}
+        {/* FITUR KLIK UNTUK EDIT PROFESI */}
         <div 
-          onClick={() => !isEditingProf && setIsEditingProf(true)}
-          className={`flex flex-col items-center sm:items-start justify-center p-2.5 rounded-xl border group cursor-pointer transition ${
-            isDarkMode ? "bg-slate-800/50 border-slate-700/60 hover:bg-slate-800" : "bg-slate-50/80 border-slate-100 hover:bg-slate-100"
-          }`}
+          onClick={() => {
+            if (!isEditingProf) {
+              setProfValue(user.stats?.profession || "");
+              setIsEditingProf(true);
+            }
+          }}
+          className={`flex flex-col items-center sm:items-start justify-center p-2.5 rounded-xl border group transition ${
+            !isEditingProf ? "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" : ""
+          } ${isDarkMode ? "bg-slate-800/50 border-slate-700/60" : "bg-slate-50/80 border-slate-100"}`}
           title="Klik untuk ubah profesi"
         >
           <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
@@ -109,13 +123,19 @@ export default function ProfileHeaderCard({ user, isDarkMode, onImageSelect, onP
               value={profValue}
               onChange={(e) => setProfValue(e.target.value)}
               onBlur={handleSaveProfesi}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveProfesi()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSaveProfesi();
+                }
+              }}
               className={`mt-0.5 w-full bg-transparent border-b outline-none text-base font-black text-center sm:text-left ${
                 isDarkMode ? "border-purple-500 text-slate-100" : "border-purple-400 text-slate-800"
               }`}
             />
           ) : (
             <span className={`text-base font-black mt-0.5 relative flex items-center justify-center sm:justify-start w-full ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+              {/* Jika masih kosong (belum di-set), tampilkan strip "-" agar space tetap ada dan bisa diklik */}
               <span className="truncate">{user.stats?.profession || "-"}</span>
               <Edit3 size={12} className="absolute -right-1 sm:static sm:ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
             </span>

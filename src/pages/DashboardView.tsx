@@ -49,17 +49,16 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
   const [loading, setLoading] = useState<boolean>(true);
   const [holidays, setHolidays] = useState<string[]>([]);
 
-  // STATE DETEKSI CUACA & LOKASI DINAMIS
+    // STATE DETEKSI CUACA & LOKASI DINAMIS
   const [weatherData, setWeatherData] = useState({
     temp: "--°C",
-    location: "Sumedang"
+    location: "Memuat..." // Ubah nilai default agar tidak langsung tampil Sumedang
   });
 
   // 1. DETEKSI LOKASI & CUACA REALTIME VIA GEOLOCATION & OPEN-METEO API
   useEffect(() => {
     const fetchWeatherAndLocation = async (lat: number, lon: number, defaultLocation: string) => {
       try {
-        // Ambil Suhu dari Open-Meteo (Gratis tanpa API Key)
         const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
         const weatherJson = await weatherRes.json();
         
@@ -68,14 +67,13 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
           tempStr = `${Math.round(weatherJson.current_weather.temperature)}°C`;
         }
 
-        // Ambil Nama Daerah (Desa/Kecamatan/Kabupaten) via Reverse Geocoding
         let detectedLoc = defaultLocation;
         try {
           const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`);
           const geoJson = await geoRes.json();
           detectedLoc = geoJson.locality || geoJson.city || geoJson.principalSubdivision || defaultLocation;
         } catch (e) {
-          console.warn("Gagal geocoding nama daerah, memakai fallback:", defaultLocation);
+          console.warn("Gagal geocoding nama daerah:", e);
         }
 
         setWeatherData({ temp: tempStr, location: detectedLoc });
@@ -84,18 +82,22 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
       }
     };
 
-    // Koordinat Default Sumedang (Ganeas/Kota) jika GPS ditolak
-    const sumedangLat = -6.8580;
-    const sumedangLon = 107.9271;
+    // Koordinat Default (Misal: Jakarta Pusat) jika GPS ditolak pengguna
+    const defaultLat = -6.2000;
+    const defaultLon = 106.8166;
 
-    if ("geolocation" in navigator) {
+        if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => fetchWeatherAndLocation(pos.coords.latitude, pos.coords.longitude, "Sumedang"),
-        () => fetchWeatherAndLocation(sumedangLat, sumedangLon, "Sumedang"),
-        { timeout: 6000 }
+        (pos) => fetchWeatherAndLocation(pos.coords.latitude, pos.coords.longitude, "Lokasi Anda"),
+        () => fetchWeatherAndLocation(defaultLat, defaultLon, "Jakarta"), 
+        { 
+          timeout: 10000,             // Beri waktu lebih lama (10 detik) untuk mencari sinyal
+          enableHighAccuracy: true,   // 👈 PAKSA GUNAKAN GPS ASLI (Bukan IP Internet)
+          maximumAge: 0               // Jangan gunakan lokasi nyangkut/cache
+        }
       );
     } else {
-      fetchWeatherAndLocation(sumedangLat, sumedangLon, "Sumedang");
+      fetchWeatherAndLocation(defaultLat, defaultLon, "Jakarta");
     }
   }, []);
 
@@ -184,12 +186,16 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
     };
   }, [visibleTasks, todayTasks]);
 
-  const weeklyActivity = useMemo(() => {
-    const daysLabel = ["M", "S", "S", "R", "K", "J", "S"];
+    const weeklyActivity = useMemo(() => {
+    // Label statis yang dipastikan berurutan dari Senin s/d Minggu
+    const labels = ["S", "S", "R", "K", "J", "S", "M"];
+    
     const now = new Date();
-    const currentDayIdx = now.getDay();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - (currentDayIdx === 0 ? 6 : currentDayIdx - 1));
+    // Ubah logika JS (Minggu = 0) menjadi standar ISO (Senin = 1, Minggu = 7)
+    const currentDayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+    
+    // Tarik mundur tanggal ke tepat hari Senin pada minggu ini
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDayOfWeek + 1);
     
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
@@ -200,13 +206,18 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
       const countCompleted = tasks.filter(t => {
         if (!t.is_completed || !t.due_date) return false;
         
+        // Parse format ISO UTC dari database ke waktu lokal perangkat secara aman
         const taskDate = new Date(t.due_date);
         const taskLocalStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, "0")}-${String(taskDate.getDate()).padStart(2, "0")}`;
         
         return taskLocalStr === dStr;
       }).length;
 
-      return { day: daysLabel[d.getDay()], val: countCompleted > 0 ? Math.min(countCompleted * 25, 100) : 10 };
+      // 1 tugas = tinggi bar 25% (maksimal 100%). Jika kosong = 10% agar bar tidak hilang sepenuhnya.
+      return { 
+        day: labels[i], 
+        val: countCompleted > 0 ? Math.min(countCompleted * 25, 100) : 10 
+      };
     });
   }, [tasks]);
 
@@ -224,7 +235,14 @@ export default function DashboardView({ activeTab, setActiveTab, activeCategory,
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} onLogout={onLogout} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeFilter={activeFilter} setActiveFilter={setActiveFilter} isDarkMode={isDarkMode} />
         
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
-          <Header setIsMobileMenuOpen={setIsMobileMenuOpen} userName={userData.name} avatarUrl={userData.avatarUrl} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+          <Header 
+  setIsMobileMenuOpen={setIsMobileMenuOpen} 
+  userName={userData.name} 
+  avatarUrl={userData.avatarUrl} 
+  isDarkMode={isDarkMode} 
+  setIsDarkMode={setIsDarkMode} 
+  setActiveTab={setActiveTab} 
+/>
 
           <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
             <ScrollAnimate animation="fade-up" delay={0}>

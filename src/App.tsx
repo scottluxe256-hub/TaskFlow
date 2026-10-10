@@ -53,9 +53,15 @@ export default function App() {
   useEffect(() => {
     const initOneSignal = async () => {
       try {
-        await OneSignal.init({
-          appId: "f5b62e2b-9ecd-4d42-8cfb-6cc19e269cad", // 👈 Masukkan OneSignal App ID kamu di sini[span_2](start_span)[span_2](end_span)
-          allowLocalhostAsSecureOrigin: true, // Supaya bisa dites via localhost/Termux[span_3](start_span)[span_3](end_span)
+                await OneSignal.init({
+          appId: "f5b62e2b-9ecd-4d42-8cfb-6cc19e269cad", 
+          allowLocalhostAsSecureOrigin: true, 
+          // 👇 TAMBAHAN: Ubah teks notifikasi welcome
+          welcomeNotification: {
+            disable: false,
+            title: "TaskFlow",
+            message: "Notifikasi berhasil diaktifkan, jangan berhenti berlangganan jika ingin notifikasi terus menyala karena semuanya gratis! 🎉"
+          }
         });
 
         // 👇 TAMBAHAN: Listener untuk notifikasi saat web terbuka (foreground)

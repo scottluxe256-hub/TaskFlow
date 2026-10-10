@@ -137,19 +137,31 @@ export default function ProfileView({
     }
   };
 
-  // 3. AUTO-SAVE PROFESI
+    // 3. AUTO-SAVE PROFESI (Dengan Optimistic Update)
   const handleAutoSaveProfession = async (newProfession) => {
+    // 1. Langsung ubah UI secara instan agar tidak terasa macet / kembali ke awal
+    setUserData((prev) => ({ 
+      ...prev, 
+      stats: { ...prev.stats, profession: newProfession } 
+    }));
+
     try {
+      // 2. Proses simpan ke database jalan di belakang layar (background)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase.from("profiles").update({ profession: newProfession }).eq("id", user.id);
-      if (error) throw error;
-
-      setUserData((prev) => ({ ...prev, stats: { ...prev.stats, profession: newProfession } }));
+      const { error } = await supabase
+        .from("profiles")
+        .update({ profession: newProfession })
+        .eq("id", user.id);
+        
+      if (error) {
+        console.error("Gagal simpan ke Supabase:", error);
+        // (Opsional) Jika gagal, kamu bisa me-revert state ke nama awal di sini
+      }
       
     } catch (error) {
-      console.error("Gagal menyimpan profesi:", error);
+      console.error("Kesalahan jaringan saat menyimpan profesi:", error);
     }
   };
 

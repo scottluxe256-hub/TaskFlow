@@ -15,12 +15,6 @@ export interface TaskModalProps {
   isDarkMode?: boolean;
 }
 
-const DEFAULT_CATEGORIES = [
-  { name: "Kerja", color: "#f59e0b" },
-  { name: "Sekolah", color: "#3b82f6" },
-  { name: "Pribadi", color: "#10b981" },
-];
-
 export default function TaskModal({
   isOpen,
   mode,
@@ -50,25 +44,15 @@ export default function TaskModal({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Ambil kategori sistem global (user_id IS NULL) dan kategori kustom milik user
     const { data, error } = await supabase
       .from("categories")
       .select("*")
-      .eq("user_id", user.id)
+      .or(`user_id.is.null,user_id.eq.${user.id}`)
       .order("created_at", { ascending: true });
 
     if (!error && data) {
-      let cats = data as Category[];
-      if (cats.length === 0) {
-        const defaultPayloads = DEFAULT_CATEGORIES.map(cat => ({
-          user_id: user.id,
-          name: cat.name,
-          color: cat.color
-        }));
-        const { data: insertedDefaults } = await supabase.from("categories").insert(defaultPayloads).select();
-        if (insertedDefaults) {
-          cats = insertedDefaults as Category[];
-        }
-      }
+      const cats = data as Category[];
       setDbCategories(cats);
 
       if (mode === "create" && cats.length > 0 && !categoryId) {
@@ -114,7 +98,7 @@ export default function TaskModal({
       setDateStr(initialDate || getTodayStr());
       setTimeStr("09:00");
     }
-  }, [isOpen, mode, taskToEdit, initialDate]);
+  }, [isOpen, mode, taskToEdit, initialDate, dbCategories.length]);
 
   if (!isOpen) return null;
 
@@ -134,10 +118,16 @@ export default function TaskModal({
       if (categoryId && categoryId.startsWith("NEW_CAT:")) {
         const [, newCatName, newCatColor] = categoryId.split(":");
         const existingCat = dbCategories.find(c => c.name.toLowerCase() === newCatName.toLowerCase());
+        
         if (existingCat) {
           finalCategoryId = existingCat.id;
         } else {
-          const { data: insertedCat, error: catErr } = await supabase.from("categories").insert([{ user_id: user.id, name: newCatName, color: newCatColor }]).select().single();
+          const { data: insertedCat, error: catErr } = await supabase
+            .from("categories")
+            .insert([{ user_id: user.id, name: newCatName, color: newCatColor }])
+            .select()
+            .single();
+
           if (catErr) throw new Error(`Gagal membuat kategori: ${catErr.message}`);
           if (insertedCat) finalCategoryId = insertedCat.id;
         }

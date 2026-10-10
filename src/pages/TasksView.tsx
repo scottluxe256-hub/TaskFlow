@@ -202,7 +202,14 @@ export default function TasksView(props: TasksViewProps) {
 
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
           <div className="relative z-40">
-            <Header setIsMobileMenuOpen={setIsMobileMenuOpen} userName={userData.name} avatarUrl={userData.avatarUrl} isDarkMode={isDarkMode} setIsDarkMode={props.setIsDarkMode} />
+            <Header 
+  setIsMobileMenuOpen={setIsMobileMenuOpen} 
+  userName={userData.name} 
+  avatarUrl={userData.avatarUrl} 
+  isDarkMode={isDarkMode} 
+  setIsDarkMode={props.setIsDarkMode} 
+  setActiveTab={props.setActiveTab} 
+/>
           </div>
 
           <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">

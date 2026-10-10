@@ -62,37 +62,41 @@ export default function Sidebar({
         return;
       }
 
+      // 1. Ambil HANYA tugas yang AKTIF (tidak di-hide)
       const { data: tasksData } = await supabase
         .from("tasks")
         .select("category_id")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("is_hidden", false);
 
-      const usedCategoryIds = new Set((tasksData || []).map(t => t.category_id).filter(Boolean));
+      const usedCategoryIds = new Set((tasksData || []).map((t) => t.category_id).filter(Boolean));
 
+      // 2. Ambil kategori sistem (user_id IS NULL) dan kategori custom user
       const { data, error } = await supabase
         .from("categories")
         .select("*")
-        .eq("user_id", user.id)
+        .or(`user_id.is.null,user_id.eq.${user.id}`)
         .order("created_at", { ascending: true });
 
       if (!error && data) {
-        const sanitizedData = data.map(cat => ({
+        const sanitizedData = data.map((cat) => ({
           ...cat,
           color: normalizeColor(cat.color, cat.name)
         }));
 
-        const combined = [...defaultCategories, ...sanitizedData];
-
-        const filtered = combined.filter(cat => {
-          const isDefault = defaultCategories.some(def => def.name.toLowerCase() === cat.name.toLowerCase());
-          const isUsedByTask = usedCategoryIds.has(cat.id);
-          return isDefault || isUsedByTask;
+        // 3. Filter: Kategori bawaan global (!cat.user_id) selalu ditampilkan,
+        //    Kategori kustom HANYA ditampilkan jika ada tugas aktif yang memakainya
+        const filtered = sanitizedData.filter((cat) => {
+          const isGlobalDefault = !cat.user_id;
+          const isUsedByActiveTask = usedCategoryIds.has(cat.id);
+          return isGlobalDefault || isUsedByActiveTask;
         });
 
+        // 4. Pastikan tidak ada duplikasi nama kategori
         const unique = Array.from(
           new Map(filtered.map((cat) => [cat.name.toLowerCase(), cat as Category])).values()
         );
-        
+
         setCategories(unique);
       } else {
         setCategories(defaultCategories);
@@ -153,14 +157,14 @@ export default function Sidebar({
         />
       )}
 
-      {/* STRUKTUR DIPERBAIKI: h-[100dvh] & overflow-y-auto dipindah ke div dalam */}
-      <aside className={`fixed md:sticky top-0 left-0 h-[100dvh] w-64 border-r flex flex-col shrink-0 z-30 transition-all duration-300 ${isDarkMode
-          ? "bg-slate-900/85 backdrop-blur-md border-slate-800/80 shadow-[4px_0_20px_rgba(0,0,0,0.3)] text-slate-100"
-          : "bg-white/85 backdrop-blur-md border-slate-200/80 shadow-[4px_0_20px_rgba(0,0,0,0.06)] text-slate-800"
-        } ${isMobileMenuOpen ? "translate-x-0 z-50" : "-translate-x-full md:translate-x-0"
-        }`}>
-        
-        {/* AREA ATAS: Bisa di-scroll berkat flex-1 dan overflow-y-auto */}
+      <aside
+        className={`fixed md:sticky top-0 bottom-0 md:bottom-auto left-0 md:h-screen w-64 border-r flex flex-col shrink-0 z-30 transition-all duration-300 ${
+          isDarkMode
+            ? "bg-slate-900/85 backdrop-blur-md border-slate-800/80 shadow-[4px_0_20px_rgba(0,0,0,0.3)] text-slate-100"
+            : "bg-white/85 backdrop-blur-md border-slate-200/80 shadow-[4px_0_20px_rgba(0,0,0,0.06)] text-slate-800"
+        } ${isMobileMenuOpen ? "translate-x-0 z-50" : "-translate-x-full md:translate-x-0"}`}
+      >
+        {/* AREA ATAS: Konten yang dapat di-scroll */}
         <div className="flex flex-col p-5 flex-1 overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-8 px-2 shrink-0">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick("dashboard")}>
@@ -172,7 +176,9 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`md:hidden p-1 cursor-pointer shrink-0 ${isDarkMode ? "text-slate-400 hover:text-purple-400" : "text-slate-500 hover:text-purple-600"}`}
+              className={`md:hidden p-1 cursor-pointer shrink-0 ${
+                isDarkMode ? "text-slate-400 hover:text-purple-400" : "text-slate-500 hover:text-purple-600"
+              }`}
             >
               <X size={20} />
             </button>
@@ -187,8 +193,9 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("dashboard")}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${activeTab === "dashboard" ? activeBtnStyle : inactiveBtnStyle
-                    }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                    activeTab === "dashboard" ? activeBtnStyle : inactiveBtnStyle
+                  }`}
                 >
                   <LayoutDashboard size={18} className={isDarkMode ? "text-purple-400" : "text-purple-600"} /> Dashboard
                 </button>
@@ -196,10 +203,11 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("tasks", "semua", "semua")}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${activeTab === "tasks" && activeFilter === "semua" && activeCategory === "semua"
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                    activeTab === "tasks" && activeFilter === "semua" && activeCategory === "semua"
                       ? activeBtnStyle
                       : inactiveBtnStyle
-                    }`}
+                  }`}
                 >
                   <CheckSquare size={18} className={isDarkMode ? "text-purple-400" : "text-purple-600"} /> Tugas Saya
                 </button>
@@ -207,8 +215,9 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("calendar")}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${activeTab === "calendar" ? activeBtnStyle : inactiveBtnStyle
-                    }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                    activeTab === "calendar" ? activeBtnStyle : inactiveBtnStyle
+                  }`}
                 >
                   <Calendar size={18} className={isDarkMode ? "text-purple-400" : "text-purple-600"} /> Kalender
                 </button>
@@ -216,8 +225,9 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("profile")}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${activeTab === "profile" ? activeBtnStyle : inactiveBtnStyle
-                    }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                    activeTab === "profile" ? activeBtnStyle : inactiveBtnStyle
+                  }`}
                 >
                   <User size={18} className={isDarkMode ? "text-purple-400" : "text-purple-600"} /> Profil
                 </button>
@@ -232,8 +242,9 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("tasks", "today", "semua")}
-                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm transition cursor-pointer ${activeTab === "tasks" && activeFilter === "today" ? activeBtnStyle : inactiveBtnStyle
-                    }`}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm transition cursor-pointer ${
+                    activeTab === "tasks" && activeFilter === "today" ? activeBtnStyle : inactiveBtnStyle
+                  }`}
                 >
                   <span className="flex items-center gap-3"><Flame size={18} className="text-amber-500" /> Hari Ini</span>
                 </button>
@@ -241,8 +252,9 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => handleNavClick("tasks", "upcoming", "semua")}
-                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm transition cursor-pointer ${activeTab === "tasks" && activeFilter === "upcoming" ? activeBtnStyle : inactiveBtnStyle
-                    }`}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-sm transition cursor-pointer ${
+                    activeTab === "tasks" && activeFilter === "upcoming" ? activeBtnStyle : inactiveBtnStyle
+                  }`}
                 >
                   <span className="flex items-center gap-3">
                     <CalendarClock size={18} className={isDarkMode ? "text-purple-400" : "text-purple-600"} /> Mendatang
@@ -255,8 +267,9 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className={`w-full flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider px-3 mb-2 transition cursor-pointer ${isDarkMode ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
-                  }`}
+                className={`w-full flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider px-3 mb-2 transition cursor-pointer ${
+                  isDarkMode ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"
+                }`}
               >
                 <span>Kategori Saya</span>
                 {isCategoryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -273,8 +286,9 @@ export default function Sidebar({
                         key={cat.id || cat.name}
                         type="button"
                         onClick={() => handleNavClick("tasks", "semua", catSlug)}
-                        className={`w-full flex items-center gap-3 px-3.5 py-1.5 rounded-xl text-sm transition cursor-pointer ${isCatActive ? activeBtnStyle : inactiveBtnStyle
-                          }`}
+                        className={`w-full flex items-center gap-3 px-3.5 py-1.5 rounded-xl text-sm transition cursor-pointer ${
+                          isCatActive ? activeBtnStyle : inactiveBtnStyle
+                        }`}
                       >
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
@@ -290,15 +304,16 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* AREA BAWAH: Dipaku permanen dengan shrink-0 */}
+        {/* AREA BAWAH: Tombol Keluar */}
         <div className={`p-5 border-t shrink-0 ${isDarkMode ? "border-slate-800/80" : "border-slate-200/80"}`}>
           <button
             type="button"
             onClick={onLogout}
-            className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl font-bold text-sm transition cursor-pointer ${isDarkMode
+            className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl font-bold text-sm transition cursor-pointer ${
+              isDarkMode
                 ? "text-slate-400 hover:bg-rose-950/40 hover:text-rose-400"
                 : "text-slate-600 hover:bg-rose-50 hover:text-rose-600"
-              }`}
+            }`}
           >
             <LogOut size={18} /> Keluar
           </button>

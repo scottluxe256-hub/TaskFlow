@@ -116,12 +116,13 @@ export default function CalendarView(props: CalendarViewProps) {
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scrollbar">
           
           <Header 
-            setIsMobileMenuOpen={setIsMobileMenuOpen} 
-            userName={userData.name} 
-            avatarUrl={userData.avatarUrl} 
-            isDarkMode={isDarkMode} 
-            setIsDarkMode={setIsDarkMode} 
-          />
+  setIsMobileMenuOpen={setIsMobileMenuOpen} 
+  userName={userData.name} 
+  avatarUrl={userData.avatarUrl} 
+  isDarkMode={isDarkMode} 
+  setIsDarkMode={setIsDarkMode} 
+  setActiveTab={setActiveTab}
+/>
 
           <main className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-6">
             <ScrollAnimate animation="fade-up" delay={0}>
