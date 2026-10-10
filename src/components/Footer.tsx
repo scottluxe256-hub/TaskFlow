@@ -77,7 +77,7 @@ export default function Footer({ handleDownloadApp }) {
                   <li><a href="#cara-kerja" className="hover:text-purple-400 transition-colors">Panduan</a></li>
                   <li>
                     <span className="hover:text-purple-400 transition-colors inline-flex items-center gap-1 cursor-pointer" onClick={handleDownloadApp}>
-                      App Android <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded font-mono font-medium">v2.4</span>
+                      App Android <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded font-mono font-medium">v3.4</span>
                     </span>
                   </li>
                   <li><a href="#solusi" className="hover:text-purple-400 transition-colors">Google OAuth</a></li>
@@ -87,7 +87,7 @@ export default function Footer({ handleDownloadApp }) {
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-white">Pembaruan Versi</h3>
                 <ul className="space-y-2 text-xs text-slate-200">
-                  <li><a href="#changelog" className="hover:text-purple-400 transition-colors">Catatan Rilis (v2.4)</a></li>
+                  <li><a href="#changelog" className="hover:text-purple-400 transition-colors">Catatan Rilis (v3.4)</a></li>
                   <li><a href="#roadmap" className="hover:text-purple-400 transition-colors">Rencana Fitur</a></li>
                   <li><a href="#status" className="hover:text-purple-400 transition-colors">Status Layanan</a></li>
                   <li><a href="#komunitas" className="hover:text-purple-400 transition-colors">Komunitas Pengguna</a></li>
