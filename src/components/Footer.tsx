@@ -103,7 +103,7 @@ export default function Footer({ handleDownloadApp }) {
             
             {/* Ikon-Ikon Sosmed Putih */}
             <div className="flex items-center space-x-4 text-white">
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaGithub size={16} /></a>
+              <a href="https://github.com/scottluxe256-hub/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaGithub size={16} /></a>
               <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTelegram size={16} /></a>
               <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaTiktok size={15} /></a>
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors"><FaInstagram size={16} /></a>
