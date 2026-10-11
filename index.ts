@@ -45,16 +45,19 @@ async function processReminders(env: Env) {
 
   // 3. Kirim Notifikasi OneSignal untuk masing-masing tugas
   for (const task of tasks) {
-        const payload = {
+    const payload = {
       app_id: env.ONESIGNAL_APP_ID,
       include_aliases: {
-        external_id: [task.user_id] // Mencocokkan dengan ID user saat login
+        external_id: [task.user_id]
       },
       target_channel: "push",
-      headings: { en: "Waktunya Fokus! ⏳" },
+      headings: { en: "Waktunya Fokus! ⏰" },
       contents: { 
-        en: `Tugas "${task.title}" mendekati tenggat waktu, segera selesaikan!` 
+        en: `Tugas ${task.title} mendekati tenggat waktu, segera selesaikan!` 
       },
+      // --- TAMBAHKAN DUA BARIS INI ---
+      priority: 10, // Memaksa Android memprioritaskan notifikasi (High Priority)
+      ttl: 3600,    // Waktu tunggu (Time-To-Live) jika HP mati/offline (dalam detik)
     };
 
     const osResponse = await fetch("https://onesignal.com/api/v1/notifications", {
