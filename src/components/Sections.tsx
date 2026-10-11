@@ -29,7 +29,7 @@ export function HeroSection({ onStart, handleDownloadApp }) {
           className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-slate-900 mb-4 sm:mb-6"
         >
           Satu Tempat Untuk <br />
-          <span className="text-purple-600">Tanggung Jawab Harian.</span>
+          <span className="text-purple-600">Tanggung Jawab Harian</span>
         </motion.h1>
 
         <motion.p
