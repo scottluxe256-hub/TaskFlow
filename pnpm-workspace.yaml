@@ -1,4 +1,6 @@
 allowBuilds:
   '@firebase/util': false
   '@tsparticles/engine': false
+  esbuild: set this to true or false
   protobufjs: false
+  workerd: set this to true or false
