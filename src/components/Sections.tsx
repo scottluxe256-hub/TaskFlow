@@ -50,7 +50,7 @@ export function HeroSection({ onStart, handleDownloadApp }) {
           <button onClick={onStart} className="w-full sm:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
             Mulai Pakai TaskFlow <ArrowRight size={16} />
           </button>
-          <a   href="https://mega.nz/file/unZ3XJRQ#sy7hCscGmdoqLyQgLh76dkQtCxNE0nevo9GFaAXiH84" 
+          <a href="https://mega.nz/file/unZ3XJRQ#sy7hCscGmdoqLyQgLh76dkQtCxNE0nevo9GFaAXiH84" 
   target="_blank" 
   rel="noopener noreferrer"
   className="w-full sm:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-white/90 text-slate-800 font-bold text-xs sm:text-sm rounded-xl border border-slate-200 shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50 cursor-pointer"
