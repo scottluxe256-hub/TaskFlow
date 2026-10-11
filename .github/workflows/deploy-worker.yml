@@ -3,7 +3,7 @@ name: Deploy Cloudflare Worker
 on:
   push:
     branches:
-      - main # Ubah ke 'master' jika branch utama repo kamu adalah master
+      - main # Ubah ke 'master' kalau branch utama repo kamu adalah master
 
 jobs:
   deploy:
@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Pasang pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
