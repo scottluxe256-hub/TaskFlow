@@ -99,7 +99,7 @@ export default function Footer({ handleDownloadApp }) {
 
           <div className="pt-6 border-t border-white/20 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-300">
             <p>© {new Date().getFullYear()} TaskFlow. All rights reserved.</p>
-            <p className="text-white font-medium">Dibuat oleh kelompok 2.</p>
+            <p className="text-white font-medium">Dibuat oleh kelompok 4.</p>
             
             {/* Ikon-Ikon Sosmed Putih */}
             <div className="flex items-center space-x-4 text-white">
